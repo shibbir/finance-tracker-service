@@ -1,1 +1,1 @@
-# finance-tracker-api
+# finance-tracker-service

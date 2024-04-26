@@ -1,0 +1,16 @@
+{
+  "extends": "@tsconfig/node21/tsconfig.json",
+  "include": ["src/**/*.ts"],
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "strictPropertyInitialization": false,
+    "outDir": "dist",
+    "sourceMap": true,
+    "resolveJsonModule": true
+  }
+}
