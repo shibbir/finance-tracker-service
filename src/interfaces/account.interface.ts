@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 
 interface Account {
     _id: Types.ObjectId;
-    id: string;
+    ynab_id: string;
     name: string;
     balance: number;
     note?: string;

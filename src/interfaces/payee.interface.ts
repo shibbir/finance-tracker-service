@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 
 interface Payee {
     _id: Types.ObjectId;
-    id: string;
+    ynab_id: string;
     name: string;
     deleted: boolean;
 }

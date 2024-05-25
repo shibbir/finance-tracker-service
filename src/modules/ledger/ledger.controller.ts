@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 import { Request, Response } from "express";
+import { format } from "date-fns";
 
 import * as b1 from "../../data/654abdab6b5587745b0fb543.json";
 import * as b2 from "../../data/654abdf86b5587745b0fb548.json";
@@ -9,14 +10,51 @@ import Ledger from "../../models/ledger.model";
 import Transaction from "../../models/transaction.model";
 import { CurrencyFormat } from "../../interfaces/ledger.interface";
 
+interface ITransactionQueries{
+    ledger_id?: string;
+    account_id?: string;
+}
+
 async function getLedgers(req: Request, res: Response) {
     const ledgers = await Ledger.find({});
     res.json(ledgers);
 }
 
+async function getLedger(req: Request, res: Response) {
+    const ledger = await Ledger.findById(req.params.id);
+    res.json(ledger);
+}
+
 async function getTransactions(req: Request, res: Response) {
-    const transactions = await Transaction.find({ ledger: req.params.id });
-    res.json(transactions);
+    const ledger = await Ledger.findById(req.params.id);
+
+    const transaction_where_clause:ITransactionQueries = { ledger_id: req.params.id };
+    if(req.query.account_id) transaction_where_clause.account_id = req.query.account_id + "";
+
+    const transactions = await Transaction.find(transaction_where_clause).lean();
+
+    const t_view = [];
+
+    for(const transaction of transactions) {
+        t_view.push({
+            ...transaction,
+            date: format(new Date(transaction.date), "dd/MM/yyyy"),
+            account: {
+                _id: transaction.account_id,
+                name: ledger?.accounts.find(o => o._id.equals(transaction.account_id))?.name
+            },
+            payee: {
+                _id: transaction.payee_id,
+                name: ledger?.payees.find(o => o._id.equals(transaction.payee_id))?.name
+            },
+            category: {
+                _id: transaction.category_id,
+                name: ledger?.categories.find(o => o._id.equals(transaction.category_id))?.name
+            }
+        });
+    }
+
+    res.json(t_view);
 }
 
 async function importdata(req: Request, res: Response) {
@@ -25,7 +63,7 @@ async function importdata(req: Request, res: Response) {
     for(const x of budgets) {
         const ledger = new Ledger({
             _id: new Types.ObjectId(),
-            id: x.data.budget.id,
+            ynab_id: x.data.budget.id,
             name: x.data.budget.name,
             date_format: x.data.budget.date_format.format,
             currency_format: <CurrencyFormat>{
@@ -40,9 +78,9 @@ async function importdata(req: Request, res: Response) {
 
         for(const account of x.data.budget.accounts) {
             ledger.accounts.push({
-                id: account.id,
+                ynab_id: account.id,
                 name: account.name,
-                balance: +account.balance.$numberInt,
+                balance: (+account.balance.$numberInt) / 1000,
                 note: account.note || undefined,
                 closed: account.closed
             });
@@ -50,7 +88,7 @@ async function importdata(req: Request, res: Response) {
 
         for(const category of x.data.budget.categories) {
             ledger.categories.push({
-                id: category.id,
+                ynab_id: category.id,
                 name: category.name,
                 note: category.note || undefined,
                 hidden: category.hidden,
@@ -60,7 +98,7 @@ async function importdata(req: Request, res: Response) {
 
         for(const payee of x.data.budget.payees) {
             ledger.payees.push({
-                id: payee.id,
+                ynab_id: payee.id,
                 name: payee.name,
                 deleted: payee.deleted
             });
@@ -70,20 +108,21 @@ async function importdata(req: Request, res: Response) {
 
         for(const t of x.data.budget.transactions) {
             const transaction = new Transaction({
-                _id: new Types.ObjectId(),
-                id: t.id,
+                ynab_id: t.id,
                 amount: +t.amount.$numberInt,
+                credit: +t.amount.$numberInt > 0 ? (+t.amount.$numberInt) / 1000 : 0,
+                debit: +t.amount.$numberInt < 0 ? (+t.amount.$numberInt) / 1000 : 0,
                 date: new Date(t.date),
                 memo: t.memo || undefined,
                 flag_color: t.flag_color || undefined,
                 deleted: t.deleted,
-                account_id: t.account_id,
-                payee_id: t.payee_id || undefined,
-                category_id: t.category_id || undefined,
-                ledger: ledger._id,
-                account: ledger.accounts.find(o => o.id === t.account_id)?._id,
-                category: ledger.categories.find(o => o.id === t.category_id)?._id,
-                payee: ledger.payees.find(o => o.id === t.payee_id)?._id
+                // account_id: t.account_id,
+                // payee_id: t.payee_id || undefined,
+                // category_id: t.category_id || undefined,
+                ledger_id: ledger._id,
+                account_id: ledger.accounts.find(o => o.ynab_id === t.account_id)?._id,
+                category_id: ledger.categories.find(o => o.ynab_id === t.category_id)?._id,
+                payee_id: ledger.payees.find(o => o.ynab_id === t.payee_id)?._id
             });
 
             await transaction.save();
@@ -93,4 +132,4 @@ async function importdata(req: Request, res: Response) {
     res.sendStatus(200);
 }
 
-export { getLedgers, getTransactions, importdata };
+export { getLedgers, getLedger, getTransactions, importdata };

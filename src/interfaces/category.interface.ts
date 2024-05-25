@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 
 interface Category {
     _id: Types.ObjectId;
-    id: string;
+    ynab_id: string;
     name: string;
     note?: string;
     hidden: boolean;

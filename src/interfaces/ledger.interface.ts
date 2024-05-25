@@ -13,7 +13,7 @@ interface CurrencyFormat {
 
 interface Ledger {
     _id: Types.ObjectId;
-    id: string;
+    ynab_id: string;
     name: string;
     last_modified_on: Date;
     date_format: string;

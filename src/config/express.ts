@@ -1,6 +1,11 @@
 import express, { Express } from "express";
+import cors from "cors";
+import helmet from "helmet";
 
 const app: Express = express();
+
+app.use(cors());
+app.use(helmet());
 
 app.set("port", process.env.PORT);
 
