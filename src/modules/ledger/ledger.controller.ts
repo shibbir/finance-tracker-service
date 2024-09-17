@@ -16,13 +16,28 @@ interface ITransactionQueries{
 }
 
 async function getLedgers(req: Request, res: Response) {
-    const ledgers = await Ledger.find({});
-    res.json(ledgers);
+    const docs = await Ledger.find({});
+    res.json(docs);
 }
 
 async function getLedger(req: Request, res: Response) {
-    const ledger = await Ledger.findById(req.params.id);
-    res.json(ledger);
+    const doc = await Ledger.findById(req.params.id);
+    res.json(doc);
+}
+
+async function getAccounts(req: Request, res: Response) {
+    const docs = await Ledger.findById(req.params.id).select('accounts');
+    res.json(docs);
+}
+
+async function getPayees(req: Request, res: Response) {
+    const docs = await Ledger.findById(req.params.id).select('payees');
+    res.json(docs);
+}
+
+async function getCategories(req: Request, res: Response) {
+    const docs = await Ledger.findById(req.params.id).select('categories');
+    res.json(docs);
 }
 
 async function getTransactions(req: Request, res: Response) {
@@ -55,6 +70,24 @@ async function getTransactions(req: Request, res: Response) {
     }
 
     res.json(t_view);
+}
+
+async function saveTransaction(req: Request, res: Response) {
+    const transaction = new Transaction({
+        _id: new Types.ObjectId(),
+        ledger_id: req.params.id,
+        account_id: req.body.account_id,
+        payee_id: req.body.payee_id,
+        category_id: req.body.category_id,
+        date: req.body.date,
+        credit: req.body.credit,
+        debit: req.body.debit,
+        memo: req.body.memo
+    });
+
+    await transaction.save();
+
+    res.sendStatus(200);
 }
 
 async function importdata(req: Request, res: Response) {
@@ -132,4 +165,4 @@ async function importdata(req: Request, res: Response) {
     res.sendStatus(200);
 }
 
-export { getLedgers, getLedger, getTransactions, importdata };
+export { getLedgers, getLedger, getAccounts, getPayees, getCategories, getTransactions, saveTransaction, importdata };
