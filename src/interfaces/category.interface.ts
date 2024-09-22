@@ -1,12 +1,12 @@
 import { Types } from "mongoose";
 
-interface Category {
+interface ICategory {
     _id: Types.ObjectId;
-    ynab_id: string;
+    ynab_id?: string;
     name: string;
     note?: string;
     hidden: boolean;
     deleted: boolean;
 }
 
-export default Category;
+export default ICategory;

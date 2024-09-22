@@ -1,22 +1,17 @@
 import { Schema, Model, model } from "mongoose";
-import Transaction from "../interfaces/transaction.interface";
+import ITransaction from "../interfaces/transaction.interface";
 
-const schema = new Schema<Transaction, Model<Transaction>>({
-    ynab_id: String,
+const schema = new Schema<ITransaction, Model<ITransaction>>({
     date: { type: Date, required: true },
     amount: Number,
-    credit: Number,
-    debit: Number,
+    type: { type: String, required: true, enum: ["credit", "debit"] },
     memo: String,
     flag_color: String,
     deleted: Boolean,
-    // account_id: { type: String, required: true },
-    // category_id: String,
-    // payee_id: String,
     ledger_id: { type: Schema.Types.ObjectId, required: true },
     account_id: { type: Schema.Types.ObjectId, required: true },
     category_id: Schema.Types.ObjectId,
-    payee_id: Schema.Types.ObjectId
+    recipient_id: Schema.Types.ObjectId
 });
 
-export default model<Transaction>("Transaction", schema);
+export default model<ITransaction>("Transaction", schema);

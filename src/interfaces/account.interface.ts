@@ -1,12 +1,12 @@
 import { Types } from "mongoose";
 
-interface Account {
+interface IAccount {
     _id: Types.ObjectId;
-    ynab_id: string;
+    ynab_id?: string;
     name: string;
     balance: number;
     note?: string;
     closed: boolean;
 }
 
-export default Account;
+export default IAccount;

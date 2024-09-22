@@ -1,26 +1,26 @@
 import { Schema, Model, model, Types } from "mongoose";
-import { CurrencyFormat, Ledger } from "../interfaces/ledger.interface";
-import Account from "../interfaces/account.interface";
-import Category from "../interfaces/category.interface";
-import Payee from "../interfaces/payee.interface";
+import { ILedger, ICurrencyFormat } from "../interfaces/ledger.interface";
+import IAccount from "../interfaces/account.interface";
+import ICategory from "../interfaces/category.interface";
+import IRecipient from "../interfaces/recipient.interface";
 
 type DocumentProps = {
-    currency_format: Types.Subdocument<Types.ObjectId> & CurrencyFormat;
-    accounts: Types.DocumentArray<Account>;
-    categories: Types.DocumentArray<Category>;
-    payees: Types.DocumentArray<Payee>;
+    currency_format: Types.Subdocument<Types.ObjectId> & ICurrencyFormat;
+    accounts: Types.DocumentArray<IAccount>;
+    categories: Types.DocumentArray<ICategory>;
+    recipients: Types.DocumentArray<IRecipient>;
 };
-type ModelType = Model<Ledger, {}, DocumentProps>;
 
-const schema = new Schema<Ledger, ModelType>({
-    ynab_id: String,
+type ModelType = Model<ILedger, {}, DocumentProps>;
+
+const schema = new Schema<ILedger, ModelType>({
     name: { type: String, required: true },
     last_modified_on: Date,
     date_format: String,
-    currency_format: new Schema<CurrencyFormat>({ iso_code: String, decimal_digits: String, decimal_separator: String, group_separator: String, currency_symbol: String }),
-    accounts: [new Schema<Account>({ ynab_id: String, name: String, balance: Number, note: String, closed: Boolean })],
-    categories: [new Schema<Category>({ ynab_id: String, name: String, note: String, hidden: Boolean, deleted: Boolean })],
-    payees: [new Schema<Payee>({ ynab_id: String, name: String, deleted: Boolean })]
+    currency_format: new Schema<ICurrencyFormat>({ iso_code: String, decimal_digits: String, decimal_separator: String, group_separator: String, currency_symbol: String }),
+    accounts: [new Schema<IAccount>({ name: String, balance: Number, note: String, closed: Boolean })],
+    categories: [new Schema<ICategory>({ name: String, note: String, hidden: Boolean, deleted: Boolean })],
+    recipients: [new Schema<IRecipient>({ name: String, deleted: Boolean })]
 });
 
-export default model<Ledger, ModelType>("Ledger", schema);
+export default model<ILedger, ModelType>("Ledger", schema);

@@ -1,10 +1,10 @@
 import { Types } from "mongoose";
 
-interface Payee {
+interface IRecipient {
     _id: Types.ObjectId;
-    ynab_id: string;
+    ynab_id?: string;
     name: string;
     deleted: boolean;
 }
 
-export default Payee;
+export default IRecipient;

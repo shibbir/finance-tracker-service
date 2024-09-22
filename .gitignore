@@ -129,5 +129,6 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-# YNAB JSON Data
-*.json
+# Exported Data
+data
+launch.json
