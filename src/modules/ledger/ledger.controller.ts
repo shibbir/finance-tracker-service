@@ -17,6 +17,9 @@ import { ILedger, ICurrencyFormat } from "../../interfaces/ledger.interface";
 interface ITransactionQueries{
     ledger_id?: string;
     account_id?: string;
+    category_id?: any;
+    date?: any;
+    amount?: any;
 }
 
 async function getLedgers(req: Request, res: Response) {
@@ -356,4 +359,71 @@ async function importFromN26(req: Request, res: Response) {
     res.sendStatus(200);
 }
 
-export { getLedgers, getLedger, getAccounts, getRecipients, getCategories, getTransactions, saveTransaction, importFromYnab, importfromCommerzbank, importFromN26 };
+async function getExpenses(req: Request, res: Response) {
+    const transaction_where_clause:ITransactionQueries = { ledger_id: req.params.id };
+
+    const transactions = await Transaction.find(transaction_where_clause).lean();
+
+    const report: any = {
+        income_vs_expense: {}
+    };
+
+    for(const transaction of transactions) {
+        const year = transaction.date.getFullYear();
+        const month = transaction.date.getMonth();
+
+        if(!report.income_vs_expense[year]) report.income_vs_expense[year] = [];
+
+        const index = report.income_vs_expense[year].findIndex(x => x.month === month);
+        if(index >= 0) {
+            report.income_vs_expense[year][index].income += transaction.amount > 0 ? transaction.amount : 0;
+            report.income_vs_expense[year][index].expense += transaction.amount < 0 ? Math.abs(transaction.amount) : 0;
+        } else {
+            report.income_vs_expense[year].push({
+                month,
+                income: transaction.amount > 0 ? transaction.amount : 0,
+                expense: transaction.amount < 0 ? Math.abs(transaction.amount) : 0
+            });
+        }
+    }
+
+    res.json(report);
+}
+
+async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
+    const year: number = req.query.year ?  +req.query.year : new Date().getFullYear();
+    const ledger = await Ledger.findById(req.params.id).select('categories').lean();
+    const transactions = await Transaction.find({
+        ledger_id: req.params.id,
+        date: {
+            $gte: new Date(new Date(year, 0, 1).setHours(0, 0, 0)),
+            $lt: new Date(new Date(year, 11, 31).setHours(23, 59, 59))
+        },
+        category_id: { $ne: null },
+        amount: { $lt: 0 }
+    }).lean();
+    const results: any = [];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+    for(const transaction of transactions) {
+        const month = months[transaction.date.getMonth()].toLowerCase();
+        const category_name = ledger.categories.find(x => x._id.equals(transaction.category_id)).name;
+
+        const e = results.find(x => x.category_id.equals(transaction.category_id));
+
+        if(e) {
+            e[month] = e[month] ? e[month] + Math.abs(transaction.amount) : Math.abs(transaction.amount);
+        } else {
+            results.push({
+                year,
+                category_id: transaction.category_id,
+                category_name: category_name,
+                [month]: Math.abs(transaction.amount)
+            });
+        }
+    }
+
+    res.json(results);
+}
+
+export { getLedgers, getLedger, getAccounts, getRecipients, getCategories, getTransactions, saveTransaction, getExpenses, getCategoricalMonthlyExpenses, importFromYnab, importfromCommerzbank, importFromN26 };
