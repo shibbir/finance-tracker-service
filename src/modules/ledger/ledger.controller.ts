@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import currency from "currency.js";
 import { format, parse } from "date-fns";
 import { Request, Response } from "express";
 
@@ -16,7 +17,7 @@ import { ILedger, ICurrencyFormat } from "../../interfaces/ledger.interface";
 
 interface ITransactionQueries{
     ledger_id?: string;
-    account_id?: string;
+    account_id?: any;
     category_id?: any;
     date?: any;
     amount?: any;
@@ -33,17 +34,17 @@ async function getLedger(req: Request, res: Response) {
 }
 
 async function getAccounts(req: Request, res: Response) {
-    const docs = await Ledger.findById(req.params.id).select('accounts');
+    const docs = await Ledger.findById(req.params.id).select("accounts");
     res.json(docs);
 }
 
-async function getRecipients(req: Request, res: Response) {
-    const docs = await Ledger.findById(req.params.id).select('recipients');
+async function getMerchants(req: Request, res: Response) {
+    const docs = await Ledger.findById(req.params.id).select("merchants");
     res.json(docs);
 }
 
 async function getCategories(req: Request, res: Response) {
-    const docs = await Ledger.findById(req.params.id).select('categories');
+    const docs = await Ledger.findById(req.params.id).select("categories");
     res.json(docs);
 }
 
@@ -51,7 +52,14 @@ async function getTransactions(req: Request, res: Response) {
     const ledger = await Ledger.findById(req.params.id);
 
     const transaction_where_clause:ITransactionQueries = { ledger_id: req.params.id };
-    if(req.query.account_id) transaction_where_clause.account_id = req.query.account_id + "";
+    if(req.query.account_id) transaction_where_clause.account_id = req.query.account_id;
+    if(req.query.category_id) transaction_where_clause.category_id = req.query.category_id;
+    if(req.query.start_date && req.query.end_date) {
+        transaction_where_clause.date = {
+            $gte: new Date(new Date(req.query.start_date).setHours(0, 0, 0)),
+            $lt: new Date(new Date(req.query.end_date).setHours(23, 59, 59))
+        };
+    }
 
     const transactions = await Transaction.find(transaction_where_clause).sort({ date: "descending" }).lean();
 
@@ -65,9 +73,9 @@ async function getTransactions(req: Request, res: Response) {
                 _id: transaction.account_id,
                 name: ledger?.accounts.find(o => o._id.equals(transaction.account_id))?.name
             },
-            recipient: {
-                _id: transaction.recipient_id,
-                name: ledger?.recipients.find(o => o._id.equals(transaction.recipient_id))?.name
+            merchant: {
+                _id: transaction.merchant_id,
+                name: ledger?.merchants.find(o => o._id.equals(transaction.merchant_id))?.name
             },
             category: {
                 _id: transaction.category_id,
@@ -80,22 +88,21 @@ async function getTransactions(req: Request, res: Response) {
 }
 
 async function saveTransaction(req: Request, res: Response) {
-    const { date, account_id, recipient_id, category_id, amount, memo } = req.body;
+    const { date, account_id, merchant_id, category_id, amount, type, memo } = req.body;
 
     const transaction = new Transaction({
         ledger_id: req.params.id,
         account_id,
-        recipient_id,
+        merchant_id,
         category_id,
         date,
         amount,
         memo,
-        type: +amount > 0 ? "credit" : "debit"
+        type
     });
 
     // await transaction.save();
 
-    // res.sendStatus(200);
     res.json(transaction);
 }
 
@@ -114,7 +121,7 @@ async function importFromYnab(req: Request, res: Response) {
             last_modified_on: new Date(x.data.budget.last_modified_on),
             accounts: [],
             categories: [],
-            recipients: []
+            merchants: []
         };
 
         for(const account of x.data.budget.accounts) {
@@ -139,12 +146,12 @@ async function importFromYnab(req: Request, res: Response) {
             });
         }
 
-        for(const recipient of x.data.budget.payees) {
-            ledger.recipients.push({
+        for(const merchant of x.data.budget.payees) {
+            ledger.merchants.push({
                 _id: new Types.ObjectId(),
-                ynab_id: recipient.id,
-                name: recipient.name,
-                deleted: recipient.deleted
+                ynab_id: merchant.id,
+                name: merchant.name,
+                deleted: merchant.deleted
             });
         }
 
@@ -165,7 +172,7 @@ async function importFromYnab(req: Request, res: Response) {
                 ledger_id: ledger._id,
                 account_id: ledger.accounts.find(o => o.ynab_id === t.account_id)?._id,
                 category_id: ledger.categories.find(o => o.ynab_id === t.category_id)?._id,
-                recipient_id: ledger.recipients.find(o => o.ynab_id === t.payee_id)?._id
+                merchant_id: ledger.merchants.find(o => o.ynab_id === t.payee_id)?._id
             });
 
             await transaction.save();
@@ -180,7 +187,7 @@ async function importfromCommerzbank(req: Request, res: Response) {
     const account_id = ledger?.accounts.find(x => x.name === "Commerzbank Current Account")?._id;
     const commerzbank_transactions: any = [];
 
-    const csv_parser = fs.createReadStream(path.join(process.cwd(), "src/data/commerzbank/commerzbank.csv")).pipe(csv_parse({ bom: true, delimiter: ";", columns: true }));
+    const csv_parser = fs.createReadStream(path.join(process.cwd(), "src/data/banks/commerzbank.csv")).pipe(csv_parse({ bom: true, delimiter: ";", columns: true }));
     for await (const row of csv_parser) {
         commerzbank_transactions.push({
             booking_date: parse(row["Booking date"], "dd.MM.yyyy", new Date()),
@@ -193,9 +200,9 @@ async function importfromCommerzbank(req: Request, res: Response) {
         if(t.amount === 0) continue;
 
         let category_id = undefined;
-        let recipient_id = undefined;
+        let merchant_id = undefined;
 
-        const recipients = [
+        const merchants = [
             { token: "edeka", value: "Edeka" },
             { token: "lidl", value: "Lidl" },
             { token: "penny", value: "Penny" },
@@ -218,9 +225,9 @@ async function importfromCommerzbank(req: Request, res: Response) {
             { token: "DM FIL", value: "DM" }
         ];
 
-        for(const r of recipients) {
+        for(const r of merchants) {
             if(t.booking_text.toLowerCase().includes(r.token.toLowerCase())) {
-                recipient_id = ledger?.recipients.find(x => x.name === r.value)?._id;
+                merchant_id = ledger?.merchants.find(x => x.name === r.value)?._id;
             }
         }
 
@@ -272,7 +279,7 @@ async function importfromCommerzbank(req: Request, res: Response) {
             ledger_id: ledger?._id,
             account_id,
             category_id,
-            recipient_id
+            merchant_id
         });
 
         await transaction.save();
@@ -286,7 +293,7 @@ async function importFromN26(req: Request, res: Response) {
     const account_id = ledger?.accounts.find(x => x.name === "N26 Standard")?._id;
     const transactions: any = [];
 
-    const csv_parser = fs.createReadStream(path.join(process.cwd(), "src/data/n26/n26.csv")).pipe(csv_parse({ bom: true, columns: true }));
+    const csv_parser = fs.createReadStream(path.join(process.cwd(), "src/data/banks/n26.csv")).pipe(csv_parse({ bom: true, columns: true }));
     for await (const row of csv_parser) {
         transactions.push({
             booking_date: parse(row["Booking Date"], "yyyy-MM-dd", new Date()),
@@ -299,18 +306,18 @@ async function importFromN26(req: Request, res: Response) {
         if(t.amount === 0) continue;
 
         let category_id = undefined;
-        let recipient_id = undefined;
+        let merchant_id = undefined;
 
-        const recipients = [
+        const merchants = [
             { token: "netflix", value: "Netflix" },
             { token: "mawista", value: "MAWISTA" },
             { token: "apple", value: "Apple" },
             { token: "aldi talk", value: "Aldi Talk" }
         ];
 
-        for(const r of recipients) {
+        for(const r of merchants) {
             if(t.booking_text.toLowerCase().includes(r.token.toLowerCase())) {
-                recipient_id = ledger?.recipients.find(x => x.name === r.value)?._id;
+                merchant_id = ledger?.merchants.find(x => x.name === r.value)?._id;
             }
         }
 
@@ -350,7 +357,7 @@ async function importFromN26(req: Request, res: Response) {
             ledger_id: ledger?._id,
             account_id,
             category_id,
-            recipient_id
+            merchant_id
         });
 
         await transaction.save();
@@ -392,7 +399,7 @@ async function getExpenses(req: Request, res: Response) {
 
 async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
     const year: number = req.query.year ?  +req.query.year : new Date().getFullYear();
-    const ledger = await Ledger.findById(req.params.id).select('categories').lean();
+    const ledger = await Ledger.findById(req.params.id).select("categories").lean();
     const transactions = await Transaction.find({
         ledger_id: req.params.id,
         date: {
@@ -403,7 +410,7 @@ async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
         amount: { $lt: 0 }
     }).lean();
     const results: any = [];
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     for(const transaction of transactions) {
         const month = months[transaction.date.getMonth()].toLowerCase();
@@ -412,13 +419,13 @@ async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
         const e = results.find(x => x.category_id.equals(transaction.category_id));
 
         if(e) {
-            e[month] = e[month] ? e[month] + Math.abs(transaction.amount) : Math.abs(transaction.amount);
+            e[month] = e[month] ? currency(e[month]).add(Math.abs(transaction.amount)) : currency(Math.abs(transaction.amount);
         } else {
             results.push({
                 year,
                 category_id: transaction.category_id,
                 category_name: category_name,
-                [month]: Math.abs(transaction.amount)
+                [month]: currency(Math.abs(transaction.amount))
             });
         }
     }
@@ -426,4 +433,4 @@ async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
     res.json(results);
 }
 
-export { getLedgers, getLedger, getAccounts, getRecipients, getCategories, getTransactions, saveTransaction, getExpenses, getCategoricalMonthlyExpenses, importFromYnab, importfromCommerzbank, importFromN26 };
+export { getLedgers, getLedger, getAccounts, getMerchants, getCategories, getTransactions, saveTransaction, getExpenses, getCategoricalMonthlyExpenses, importFromYnab, importfromCommerzbank, importFromN26 };

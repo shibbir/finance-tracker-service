@@ -11,7 +11,7 @@ const schema = new Schema<ITransaction, Model<ITransaction>>({
     ledger_id: { type: Schema.Types.ObjectId, required: true },
     account_id: { type: Schema.Types.ObjectId, required: true },
     category_id: Schema.Types.ObjectId,
-    recipient_id: Schema.Types.ObjectId
+    merchant_id: Schema.Types.ObjectId
 });
 
 export default model<ITransaction>("Transaction", schema);

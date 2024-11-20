@@ -1,10 +1,10 @@
 import { Types } from "mongoose";
 
-interface IRecipient {
+interface IMerchant {
     _id: Types.ObjectId;
     ynab_id?: string;
     name: string;
     deleted: boolean;
 }
 
-export default IRecipient;
+export default IMerchant;

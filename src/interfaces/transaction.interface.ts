@@ -10,7 +10,7 @@ interface ITransaction {
     deleted: boolean;
     ledger_id: Types.ObjectId;
     account_id?: Types.ObjectId;
-    recipient_id?: Types.ObjectId;
+    merchant_id?: Types.ObjectId;
     category_id?: Types.ObjectId;
 }
 
