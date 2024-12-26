@@ -419,7 +419,7 @@ async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
         const e = results.find(x => x.category_id.equals(transaction.category_id));
 
         if(e) {
-            e[month] = e[month] ? currency(e[month]).add(Math.abs(transaction.amount)) : currency(Math.abs(transaction.amount);
+            e[month] = e[month] ? currency(e[month]).add(Math.abs(transaction.amount)) : currency(Math.abs(transaction.amount));
         } else {
             results.push({
                 year,
