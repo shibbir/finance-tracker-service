@@ -20,7 +20,7 @@ const schema = new Schema<ILedger, ModelType>({
     currency_format: new Schema<ICurrencyFormat>({ iso_code: String, decimal_digits: String, decimal_separator: String, group_separator: String, currency_symbol: String }),
     accounts: [new Schema<IAccount>({ name: String, balance: Number, note: String, closed: Boolean })],
     categories: [new Schema<ICategory>({ name: String, note: String, hidden: Boolean, deleted: Boolean })],
-    merchants: [new Schema<IMerchant>({ name: String, deleted: Boolean })]
+    merchants: [new Schema<IMerchant>({ name: String })]
 });
 
 export default model<ILedger, ModelType>("Ledger", schema);
