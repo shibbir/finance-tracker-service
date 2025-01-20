@@ -67,37 +67,6 @@ async function saveTransaction(req: Request, res: Response) {
     res.json(transaction);
 }
 
-async function getExpenses(req: Request, res: Response) {
-    const transaction_where_clause:ITransactionQueries = { ledger_id: req.params.id };
-
-    const transactions = await Transaction.find(transaction_where_clause).lean();
-
-    const report: any = {
-        income_vs_expense: {}
-    };
-
-    for(const transaction of transactions) {
-        const year = transaction.date.getFullYear();
-        const month = transaction.date.getMonth();
-
-        if(!report.income_vs_expense[year]) report.income_vs_expense[year] = [];
-
-        const index = report.income_vs_expense[year].findIndex(x => x.month === month);
-        if(index >= 0) {
-            report.income_vs_expense[year][index].income += transaction.amount > 0 ? transaction.amount : 0;
-            report.income_vs_expense[year][index].expense += transaction.amount < 0 ? Math.abs(transaction.amount) : 0;
-        } else {
-            report.income_vs_expense[year].push({
-                month,
-                income: transaction.amount > 0 ? transaction.amount : 0,
-                expense: transaction.amount < 0 ? Math.abs(transaction.amount) : 0
-            });
-        }
-    }
-
-    res.json(report);
-}
-
 async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
     const year: number = req.query.year ?  +req.query.year : new Date().getFullYear();
     const ledger = await Ledger.findById(req.params.id).select("categories").lean();
@@ -134,4 +103,4 @@ async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
     res.json(results);
 }
 
-export { getLedgers, getLedger, getAccounts, getMerchants, getCategories, saveTransaction, getExpenses, getCategoricalMonthlyExpenses };
+export { getLedgers, getLedger, getAccounts, getMerchants, getCategories, saveTransaction, getCategoricalMonthlyExpenses };

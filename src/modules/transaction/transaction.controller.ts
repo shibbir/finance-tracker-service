@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import { Request, Response } from "express";
 
 import Ledger from "../../models/ledger.model";
@@ -20,8 +19,8 @@ async function getTransactions(req: Request, res: Response) {
     if(req.query.category_id) transaction_where_clause.category_id = req.query.category_id;
     if(req.query.start_date && req.query.end_date) {
         transaction_where_clause.date = {
-            $gte: new Date(new Date(req.query.start_date).setHours(0, 0, 0)),
-            $lt: new Date(new Date(req.query.end_date).setHours(23, 59, 59))
+            $gte: new Date(new Date(req.query.start_date as string).setHours(0, 0, 0)),
+            $lt: new Date(new Date(req.query.end_date as string).setHours(23, 59, 59))
         };
     }
 
@@ -32,7 +31,6 @@ async function getTransactions(req: Request, res: Response) {
     for(const transaction of transactions) {
         t_view.push({
             ...transaction,
-            date: format(new Date(transaction.date), "dd/MM/yyyy"),
             account: {
                 _id: transaction.account_id,
                 name: ledger?.accounts.find(o => o._id.equals(transaction.account_id))?.name
