@@ -1,27 +1,25 @@
 import currency from "currency.js";
+import { Types } from "mongoose";
 import { NextFunction, Request, Response } from "express";
 
 import Ledger from "../../models/ledger.model";
 import Transaction from "../../models/transaction.model";
-
-interface ITransactionQueries{
-    ledger_id?: string;
-    account_id?: any;
-    category_id?: any;
-    date?: any;
-    amount?: any;
-}
+import ICategory from "../../interfaces/category.interface";
 
 async function getLedgers(req: Request, res: Response) {
     const docs = await Ledger.find({}).select("name");
     res.json(docs);
 }
 
-async function getLedger(req: Request, res: Response, next: NextFunction) {
+const getLedger = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
         const ledger = await Ledger.findById(req.params.id);
 
-        for(const account of ledger?.accounts) {
+        if (!ledger) {
+            return res.status(404).json({ error: `Ledger not found: ${req.params.id}` });
+        }
+
+        for(const account of ledger.accounts) {
             const transactions = await Transaction.find({ ledger_id: req.params.id, account_id: account._id }).lean();
             const balance = transactions.reduce((acc, cur) => acc + cur.amount, 0);
             account.balance = balance;
@@ -68,8 +66,16 @@ async function saveTransaction(req: Request, res: Response) {
 }
 
 async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
+    interface MonthlyCategoryExpense {
+        year: number;
+        category_id?: Types.ObjectId;
+        category_name?: string;
+        [month: string]: any;
+    }
+
     const year: number = req.query.year ?  +req.query.year : new Date().getFullYear();
     const ledger = await Ledger.findById(req.params.id).select("categories").lean();
+
     const transactions = await Transaction.find({
         ledger_id: req.params.id,
         date: {
@@ -79,17 +85,18 @@ async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
         category_id: { $ne: null },
         amount: { $lt: 0 }
     }).lean();
-    const results: any = [];
+
+    const results: MonthlyCategoryExpense[] = [];
     const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     for(const transaction of transactions) {
         const month = months[transaction.date.getMonth()].toLowerCase();
-        const category_name = ledger.categories.find(x => x._id.equals(transaction.category_id)).name;
+        const category_name = (ledger?.categories as ICategory[]).find(x => x._id.equals(transaction.category_id))?.name;
 
-        const e = results.find(x => x.category_id.equals(transaction.category_id));
+        const existing = results.find((x: MonthlyCategoryExpense) => x.category_id?.equals(transaction.category_id));
 
-        if(e) {
-            e[month] = e[month] ? currency(e[month]).add(Math.abs(transaction.amount)) : currency(Math.abs(transaction.amount));
+        if(existing) {
+            existing[month] = existing[month] ? currency(existing[month]).add(Math.abs(transaction.amount)) : currency(Math.abs(transaction.amount));
         } else {
             results.push({
                 year,

@@ -1,52 +1,45 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 
 import Ledger from "../../models/ledger.model";
 import Transaction from "../../models/transaction.model";
 
-interface ITransactionQueries{
-    ledger_id?: string;
-    account_id?: any;
-    category_id?: any;
-    date?: any;
-    amount?: any;
-}
+const getTransactions = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+    try {
+        const ledger = await Ledger.findById(req.params.id);
 
-async function getTransactions(req: Request, res: Response) {
-    const ledger = await Ledger.findById(req.params.id);
+        if (!ledger) {
+            return res.status(404).json({ error: `Ledger not found: ${req.params.id}` });
+        }
 
-    const transaction_where_clause:ITransactionQueries = { ledger_id: req.params.id };
-    if(req.query.account_id) transaction_where_clause.account_id = req.query.account_id;
-    if(req.query.category_id) transaction_where_clause.category_id = req.query.category_id;
-    if(req.query.start_date && req.query.end_date) {
-        transaction_where_clause.date = {
-            $gte: new Date(new Date(req.query.start_date as string).setHours(0, 0, 0)),
-            $lt: new Date(new Date(req.query.end_date as string).setHours(23, 59, 59))
-        };
-    }
+        const { account_id, category_id, merchant_id, start_date, end_date } = req.query;
+        const filter: any = { ledger_id: req.params.id };
 
-    const transactions = await Transaction.find(transaction_where_clause).sort({ date: "descending" }).lean();
-
-    const t_view = [];
-
-    for(const transaction of transactions) {
-        t_view.push({
-            ...transaction,
-            account: {
-                _id: transaction.account_id,
-                name: ledger?.accounts.find(o => o._id.equals(transaction.account_id))?.name
-            },
-            merchant: {
-                _id: transaction.merchant_id,
-                name: ledger?.merchants.find(o => o._id.equals(transaction.merchant_id))?.name
-            },
-            category: {
-                _id: transaction.category_id,
-                name: ledger?.categories.find(o => o._id.equals(transaction.category_id))?.name
+        if (account_id) filter.account_id = account_id;
+        if (category_id) filter.category_id = category_id;
+        if (merchant_id) filter.merchant_id = merchant_id;
+        if (start_date || end_date) {
+            filter.date = {};
+            if (start_date) {
+                filter.date.$gte = new Date(new Date(start_date as string).setHours(0, 0, 0));
             }
-        });
-    }
+            if (end_date) {
+                filter.date.$lte = new Date(new Date(end_date as string).setHours(23, 59, 59, 999));
+            }
+        }
 
-    res.json(t_view);
+        const transactions = await Transaction.find(filter).sort({ date: -1 }).lean();
+
+        const response = transactions.map(tx => ({
+            ...tx,
+            account: { _id: tx.account_id,  name: ledger.accounts.find(a => a._id.equals(tx.account_id))?.name },
+            merchant: { _id: tx.merchant_id, name: ledger.merchants.find(m => m._id.equals(tx.merchant_id))?.name },
+            category: { _id: tx.category_id, name: ledger.categories.find(c => c._id.equals(tx.category_id))?.name }
+        }));
+
+        res.json(response);
+    } catch (error) {
+        next(error);
+    }
 }
 
 export { getTransactions };
