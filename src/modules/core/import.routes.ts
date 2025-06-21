@@ -20,13 +20,13 @@ async function import_statements(ledger: any, account: any, statements: any) {
     if(!ledger || !account || !statements) throw new Error("Nothing to import!");
 
     const categories = [
-        { token: /edeka|lidl|penny|rewe|kaufland|amritpreet singh|seven days curry|7 days curry pizza|al arabi|netto|rabih maarouf|nahkauf|kabul markt|ariana-orient-house|rees frischemaerkte kg|delhi masala shop|aldi|aktiv markt sehrer|feinkostmaerkte sehrer|ariana-orient-house|darmalingam prathakaran/, value: "Groceries" },
-        { token: /best kebap|mcdonalds|yorma|wowfullz|schäfers backstube|ditsch|rasoi restaurant|selecta deutschland|uber|nami wok|sofra kebap|olivia city|beckesepp baeckerei|yormas|freiburger kebap st|saechsische grossbaeckerei|fleischerei richter/, value: "Eating Out" },
+        { token: /vnr: 130264|studentenwerk|ccb.152.ue.pos00112195/, value: "Rent/Mortgage" },
+        { token: /edeka|lidl|penny|rewe|kaufland|amritpreet singh|seven days curry|7 days curry pizza|al arabi|netto|rabih maarouf|nahkauf|kabul markt|ariana-orient-house|arianaorienthouse gmbh|rees frischemaerkte kg|delhi masala shop|aldi|aktiv markt sehrer|feinkostmaerkte sehrer|ariana-orient-house|darmalingam prathakaran|c markt/, value: "Groceries" },
+        { token: /best kebap|mcdonalds|yorma|wowfullz|schäfers backstube|ditsch|rasoi restaurant|selecta deutschland|uber|nami wok|sofra kebap|olivia city|beckesepp baeckerei|yormas|freiburger kebap st|saechsische grossbaeckerei|fleischerei richter|hofmans bakery|city kebab|freiburger kebap st|backwerk karlsruhe hbf|anjappar chettinad resta|maydonoz doener|long quan gastronom|willy dany restaurantbetri|le crobag gmbh & co. kg 5004 gir 69 2024-03-24t15:29:13/, value: "Eating Out" },
         { token: /ea swiss sarl|stea mpowered.com/, value: "Entertainment" },
         // { token: /pfa pflanzen fuer alle gmbh/, value: "Home Improvement" },
-        { token: /mietwasch|ccb.343.ue.pos00123816|woolworth gmbh fil. 1745|woolworth gmbh fil. 1495|woolworth gmbh fil.1318|6g5ospzc028l5mle|6mlzs4skty48w2en|6h9171kenvevc0cv|4qx8r6adug4t7rkt|dm drogeriemarkt|ccb.071.ue.pos00154086|ikea|dm fil.2306 h:65132|3eccuohof3g10xsi|oyz3q665trgysxeg|4r3vxkkn5e89r2ri|1035179163747|dm fil.0428 h:65132/, value: "Home Maintenance" },
-        { token: /ft: travel|1036833884626|hotel attache|ramada encore|nextbike gmbh|trainline|louvre|hotel aladin|operator ict - aplika|villa melchiorre|azienda trasporti milanesi|milano|alice pizza negozi|erre bar villa monaste|panificio anteri|alhamdulillah minim|super 8|ryanair|venchi bergamo air|mcdonalds aeroporto be/, value: "Travel/Vacation" },
-        { token: /vnr: 130264|studentenwerk|ccb.152.ue.pos00112195/, value: "Rent/Mortgage" },
+        { token: /mietwasch|ccb.343.ue.pos00123816|woolworth gmbh fil. 1745|woolworth gmbh fil. 1495|woolworth gmbh fil.1318|6g5ospzc028l5mle|6mlzs4skty48w2en|6h9171kenvevc0cv|4qx8r6adug4t7rkt|dm drogeriemarkt|ccb.071.ue.pos00154086|ikea|dm fil.2306 h:65132|3eccuohof3g10xsi|oyz3q665trgysxeg|4r3vxkkn5e89r2ri|1035179163747|dm fil.0428 h:65132|ccb.149.ue.pos00013276|3687 chemnitz-sonnenbe\/philippstrae|pepco germany gmbh\/strasse der nati 2025-04-19t14:38:01/, value: "Home Maintenance" },
+        { token: /ft: travel|1036833884626|hotel attache|ramada encore|trainline|louvre|hotel aladin|operator ict - aplika|villa melchiorre|azienda trasporti milanesi|milano|alice pizza negozi|erre bar villa monaste|panificio anteri|alhamdulillah minim|super 8|ryanair|venchi bergamo air|mcdonalds aeroporto be|ft_vacation/, value: "Travel/Vacation" },
         { token: /tuc 680743|udemy|u6447sdmrscm1e2h/, value: "Education" },
         { token: /getsafe/, value: "Liability Insurance" },
         { token: /strom carl-von-ossietzky/, value: "Electric" },
@@ -38,8 +38,9 @@ async function import_statements(ledger: any, account: any, statements: any) {
         { token: /rundfunk/, value: "Broadcasting Fee" },
         { token: /ca\/\/chemnitz|ca\/\/freiburg/, value: "Clothing" },
         { token: /taxfix|account management/, value: "Tax, Interest & Bank Fees" },
-        { token: /pfa pflanzen fuer alle gmbh|karl schmitt co.kg bahnhofs|sostrene grene|siemes schuhcenter gmbh|shein|52f0akw65qgw8vv6|45ecxs6246ht0z1j/, value: "Wife" },
-        { token: /6gw8h9eo8d7wk4zb|1041861078350|md mossihur rahman|b.b hotels germany gmbh gir 6920881|1041597335896/, value: "Miscellaneous" }
+        { token: /pfa pflanzen fuer alle gmbh|karl schmitt co.kg bahnhofs|sostrene grene|siemes schuhcenter gmbh|shein|52f0akw65qgw8vv6|45ecxs6246ht0z1j|flac\/\/freiburg|amazon\.de\*a98j84ax5|temu.com|deichmann - schuhe\/\/chemnitz\/de 2025-02-22t13:57:32/, value: "Wife" },
+        { token: /6gw8h9eo8d7wk4zb|1041861078350|md mossihur rahman|b.b hotels germany gmbh gir 6920881|1041597335896|ccb.076.ue.pos00123642|ccb.072.ue.pos00002748|1040696021474/, value: "Miscellaneous" },
+        { token: /nextbike gmbh|1041094016282/, value: "Transportation" },
     ];
 
     const merchants = [
@@ -52,7 +53,7 @@ async function import_statements(ledger: any, account: any, statements: any) {
         { token: /ikea/, value: "IKEA" },
         { token: /deichmann/, value: "Deichmann" },
         { token: /woolworth/, value: "Woolworth GmbH" },
-        { token: /bs 51 gmbh/, value: "Brain Station 51 GmbH" },
+        { token: /bs 51 gmbh/, value: "Brain Station 51" },
         { token: /brain station 23 gmbh/, value: "Brain Station 23 GmbH" },
         { token: /mcdonald/, value: "McDonald's" },
         { token: /pepco/, value: "Pepco" },
@@ -93,15 +94,24 @@ async function import_statements(ledger: any, account: any, statements: any) {
         { token: /aldi/, value: "Aldi" },
         { token: /account management/, value: "Commerzbank" },
         { token: /sostrene grene/, value: "Søstrene Grene" },
-        { token: /ariana-orient-house/, value: "Ariana Orient House GmbH" },
+        { token: /ariana-orient-house|arianaorienthouse gmbh/, value: "Ariana Orient House GmbH" },
         { token: /azienda trasporti milanesi/, value: "ATM Milano" },
         { token: /piz milano/, value: "Piz Milano" },
         { token: /ryanair/, value: "Ryanair" },
         { token: /siemes schuhcenter gmbh/, value: "SIEMES Schuhcenter GmbH" },
-        { token: /shein/, value: "SHEIN" }
+        { token: /shein/, value: "SHEIN" },
+        { token: /3687 chemnitz-sonnenbe\/philippstrae/, value: "Action Deutschland GmbH" },
+        { token: /1041094016282/, value: "Deutsche Bahn AG" },
+        { token: /le crobag/, value: "Le Crobag" }
     ];
 
-    const excludes_statements = [/1040431961971/, /ccb.063.ue.pos00123389/, /1041817937082/, /yyw1041949858359/, /amazon\.de\*pp9f00py5/];
+    const excludes_statements = [
+        /1040431961971/, /ccb.063.ue.pos00123389/, /1041817937082/, /yyw1041949858359/, /amazon\.de\*pp9f00py5/, /iphone 16: part 1/, /ccb.358.ue.pos00039622/, /ccb.301.ue.pos00110079/,
+        /ccb.270.ue.pos00055906/, /ccb.332.ue.pos00203270/, /dispoid:000178601462269/, /dispoid:000178580255411/, /dispoid:000178572347615/, /dispoid:000056924668600/,
+        /bargeldeinzahlung karte 0 einzahlautomat 214174 einzahlung 16.06.2025 18:06 freiburg kaiser-joseph-str./, /bargeldauszahlung commerzbank 00202269\/kaiser-joseph- 2025-05-31t18:42:59/,
+        /bargeldauszahlung commerzbank 00210688\/markt\/chemnitz 2024-09-10t13:54:57/, /bargeldauszahlung commerzbank 00202644\/markt\/chemnitz 2024-07-16t14:07:12/,
+        /bargeldeinzahlung karte 0 einzahlautomat 214135 einzahlung 21.03.2025 20:37 frankfurt am main roßmarkt/
+    ];
 
     const merchantMap = new Map(ledger.merchants.map((c: { name: string; _id: string }) => [c.name, c._id]));
     const categoryMap = new Map(ledger.categories.map((c: { name: string; _id: string }) => [c.name, c._id]));
@@ -112,7 +122,7 @@ async function import_statements(ledger: any, account: any, statements: any) {
         const normalizedBookingText = statement.booking_text.toLowerCase().replace(/\s+/g, " ");
 
         if (typeof statement.amount !== "number" || isNaN(statement.amount) || statement.amount === 0) continue;
-        if (statement.booking_text === "FT: Ignore") continue;
+        if (statement.normalizedBookingText === "ft_ignore") continue;
         if (excludes_statements.some(ex => ex.test(normalizedBookingText))) continue;
 
         let category_id = undefined;

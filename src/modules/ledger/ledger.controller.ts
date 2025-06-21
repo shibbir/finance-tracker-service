@@ -31,21 +31,6 @@ const getLedger = async (req: Request, res: Response, next: NextFunction): Promi
     }
 }
 
-async function getAccounts(req: Request, res: Response) {
-    const ledger = await Ledger.findById(req.params.id).select("accounts");
-    res.json(ledger);
-}
-
-async function getMerchants(req: Request, res: Response) {
-    const docs = await Ledger.findById(req.params.id).select("merchants");
-    res.json(docs);
-}
-
-async function getCategories(req: Request, res: Response) {
-    const docs = await Ledger.findById(req.params.id).select("categories");
-    res.json(docs);
-}
-
 async function saveTransaction(req: Request, res: Response) {
     const { date, account_id, merchant_id, category_id, amount, type, memo } = req.body;
 
@@ -82,8 +67,7 @@ async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
             $gte: new Date(new Date(year, 0, 1).setHours(0, 0, 0)),
             $lt: new Date(new Date(year, 11, 31).setHours(23, 59, 59))
         },
-        category_id: { $ne: null },
-        amount: { $lt: 0 }
+        category_id: { $ne: null }
     }).lean();
 
     const results: MonthlyCategoryExpense[] = [];
@@ -96,13 +80,13 @@ async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
         const existing = results.find((x: MonthlyCategoryExpense) => x.category_id?.equals(transaction.category_id));
 
         if(existing) {
-            existing[month] = existing[month] ? currency(existing[month]).add(Math.abs(transaction.amount)) : currency(Math.abs(transaction.amount));
+            existing[month] = existing[month] ? currency(existing[month]).add(transaction.amount) : currency(transaction.amount);
         } else {
             results.push({
                 year,
                 category_id: transaction.category_id,
                 category_name: category_name,
-                [month]: currency(Math.abs(transaction.amount))
+                [month]: currency(transaction.amount)
             });
         }
     }
@@ -110,4 +94,4 @@ async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
     res.json(results);
 }
 
-export { getLedgers, getLedger, getAccounts, getMerchants, getCategories, saveTransaction, getCategoricalMonthlyExpenses };
+export { getLedgers, getLedger, saveTransaction, getCategoricalMonthlyExpenses };
