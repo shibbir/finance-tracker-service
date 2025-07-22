@@ -20,9 +20,9 @@ async function import_statements(ledger: any, account: any, statements: any) {
     if(!ledger || !account || !statements) throw new Error("Nothing to import!");
 
     const categories = [
-        { token: /vnr: 130264|studentenwerk|ccb.152.ue.pos00112195/, value: "Rent/Mortgage" },
+        { token: /vnr: 130264|studentenwerk|ccb.152.ue.pos00112195|ccb.182.ue.pos00615078/, value: "Rent/Mortgage" },
         { token: /edeka|lidl|penny|rewe|kaufland|amritpreet singh|seven days curry|7 days curry pizza|al arabi|netto|rabih maarouf|nahkauf|kabul markt|ariana-orient-house|arianaorienthouse gmbh|rees frischemaerkte kg|delhi masala shop|aldi|aktiv markt sehrer|feinkostmaerkte sehrer|ariana-orient-house|darmalingam prathakaran|c markt/, value: "Groceries" },
-        { token: /best kebap|mcdonalds|yorma|wowfullz|schäfers backstube|ditsch|rasoi restaurant|selecta deutschland|uber|nami wok|sofra kebap|olivia city|beckesepp baeckerei|yormas|freiburger kebap st|saechsische grossbaeckerei|fleischerei richter|hofmans bakery|city kebab|freiburger kebap st|backwerk karlsruhe hbf|anjappar chettinad resta|maydonoz doener|long quan gastronom|willy dany restaurantbetri|le crobag gmbh & co. kg 5004 gir 69 2024-03-24t15:29:13/, value: "Eating Out" },
+        { token: /best kebap|mcdonalds|yorma|wowfullz|schäfers backstube|ditsch|rasoi restaurant|selecta deutschland|uber|nami wok|sofra kebap|olivia city|beckesepp baeckerei|yormas|freiburger kebap st|saechsische grossbaeckerei|fleischerei richter|hofmans bakery|city kebab|freiburger kebap st|backwerk karlsruhe hbf|anjappar chettinad resta|maydonoz doener|long quan gastronom|willy dany restaurantbetri|le crobag gmbh & co. kg 5004 gir 69 2024-03-24t15:29:13|00210688\/markt\/chemnitz 2025-06-28t17|haus des doner freiburg|63160150 chemnitz db s\/bahnhofstras 2025-07-12t18:49:32|sumup\s*\.?sultan palast\/pfarr 11\/hof/, value: "Eating Out" },
         { token: /ea swiss sarl|stea mpowered.com/, value: "Entertainment" },
         // { token: /pfa pflanzen fuer alle gmbh/, value: "Home Improvement" },
         { token: /mietwasch|ccb.343.ue.pos00123816|woolworth gmbh fil. 1745|woolworth gmbh fil. 1495|woolworth gmbh fil.1318|6g5ospzc028l5mle|6mlzs4skty48w2en|6h9171kenvevc0cv|4qx8r6adug4t7rkt|dm drogeriemarkt|ccb.071.ue.pos00154086|ikea|dm fil.2306 h:65132|3eccuohof3g10xsi|oyz3q665trgysxeg|4r3vxkkn5e89r2ri|1035179163747|dm fil.0428 h:65132|ccb.149.ue.pos00013276|3687 chemnitz-sonnenbe\/philippstrae|pepco germany gmbh\/strasse der nati 2025-04-19t14:38:01/, value: "Home Maintenance" },
@@ -38,8 +38,8 @@ async function import_statements(ledger: any, account: any, statements: any) {
         { token: /rundfunk/, value: "Broadcasting Fee" },
         { token: /ca\/\/chemnitz|ca\/\/freiburg/, value: "Clothing" },
         { token: /taxfix|account management/, value: "Tax, Interest & Bank Fees" },
-        { token: /pfa pflanzen fuer alle gmbh|karl schmitt co.kg bahnhofs|sostrene grene|siemes schuhcenter gmbh|shein|52f0akw65qgw8vv6|45ecxs6246ht0z1j|flac\/\/freiburg|amazon\.de\*a98j84ax5|temu.com|deichmann - schuhe\/\/chemnitz\/de 2025-02-22t13:57:32/, value: "Wife" },
-        { token: /6gw8h9eo8d7wk4zb|1041861078350|md mossihur rahman|b.b hotels germany gmbh gir 6920881|1041597335896|ccb.076.ue.pos00123642|ccb.072.ue.pos00002748|1040696021474/, value: "Miscellaneous" },
+        { token: /pfa pflanzen fuer alle gmbh|karl schmitt co.kg bahnhofs|sostrene grene|siemes schuhcenter gmbh|shein|52f0akw65qgw8vv6|45ecxs6246ht0z1j|flac\/\/freiburg|amazon\.de\*a98j84ax5|temu.com|deichmann - schuhe\/\/chemnitz\/de 2025-02-22t13:57:32|ccb.190.ue.pos00001847|tedi\/\/freiburg\/de 2025-07-19t17:18:36 kfn 0 vj 2612 kartenzahlung/, value: "Wife" },
+        { token: /6gw8h9eo8d7wk4zb|1041861078350|md mossihur rahman|b.b hotels germany gmbh gir 6920881|1041597335896|ccb.076.ue.pos00123642|ccb.072.ue.pos00002748|1040696021474|1043190752959|1043114345411|short pitch cricket|1043409233927/, value: "Miscellaneous" },
         { token: /nextbike gmbh|1041094016282/, value: "Transportation" },
     ];
 
@@ -55,13 +55,13 @@ async function import_statements(ledger: any, account: any, statements: any) {
         { token: /woolworth/, value: "Woolworth GmbH" },
         { token: /bs 51 gmbh/, value: "Brain Station 51" },
         { token: /brain station 23 gmbh/, value: "Brain Station 23 GmbH" },
-        { token: /mcdonald/, value: "McDonald's" },
+        { token: /mcdonald|willy dany restaurantbetri/, value: "McDonald's" },
         { token: /pepco/, value: "Pepco" },
         { token: /ea swiss sarl/, value: "Electronic Arts" },
         { token: /best kebap/, value: "Best Kebap" },
         { token: /al arabi/, value: "Arabic Halal Meat Shop" },
         { token: /saturn|1035179163747/, value: "Saturn" },
-        { token: /amazon|u6447sdmrscm1e2h/, value: "Amazon" },
+        { token: /amazon|u6447sdmrscm1e2h|ccb.190.ue.pos00001847/, value: "Amazon" },
         { token: /apple/, value: "Apple Inc." },
         { token: /trainline/, value: "Trainline" },
         { token: /\bdm\b/, value: "DM" },
@@ -102,15 +102,16 @@ async function import_statements(ledger: any, account: any, statements: any) {
         { token: /shein/, value: "SHEIN" },
         { token: /3687 chemnitz-sonnenbe\/philippstrae/, value: "Action Deutschland GmbH" },
         { token: /1041094016282/, value: "Deutsche Bahn AG" },
-        { token: /le crobag/, value: "Le Crobag" }
+        { token: /le crobag/, value: "Le Crobag" },
+        { token: /haus des doner freiburg/, value: "Haus des Döners"}
     ];
 
     const excludes_statements = [
-        /1040431961971/, /ccb.063.ue.pos00123389/, /1041817937082/, /yyw1041949858359/, /amazon\.de\*pp9f00py5/, /iphone 16: part 1/, /ccb.358.ue.pos00039622/, /ccb.301.ue.pos00110079/,
+        /1040431961971/, /ccb.063.ue.pos00123389/, /1041817937082/, /yyw1041949858359/, /amazon\.de\*pp9f00py5/, /iphone 16: part 1/, /iphone 16: part 2/, /ccb.358.ue.pos00039622/, /ccb.301.ue.pos00110079/,
         /ccb.270.ue.pos00055906/, /ccb.332.ue.pos00203270/, /dispoid:000178601462269/, /dispoid:000178580255411/, /dispoid:000178572347615/, /dispoid:000056924668600/,
         /bargeldeinzahlung karte 0 einzahlautomat 214174 einzahlung 16.06.2025 18:06 freiburg kaiser-joseph-str./, /bargeldauszahlung commerzbank 00202269\/kaiser-joseph- 2025-05-31t18:42:59/,
         /bargeldauszahlung commerzbank 00210688\/markt\/chemnitz 2024-09-10t13:54:57/, /bargeldauszahlung commerzbank 00202644\/markt\/chemnitz 2024-07-16t14:07:12/,
-        /bargeldeinzahlung karte 0 einzahlautomat 214135 einzahlung 21.03.2025 20:37 frankfurt am main roßmarkt/
+        /bargeldeinzahlung karte 0 einzahlautomat 214135 einzahlung 21.03.2025 20:37 frankfurt am main roßmarkt/, /ry5f84g64/, /r79jy9bb4/
     ];
 
     const merchantMap = new Map(ledger.merchants.map((c: { name: string; _id: string }) => [c.name, c._id]));
@@ -310,7 +311,10 @@ async function import_n26() {
             const amountRaw = row["Amount (EUR)"];
             const amount = typeof amountRaw === "string" ? parseFloat(amountRaw.replace(",", ".")) : amountRaw;
 
-            if (isNaN(amount)) continue;
+            if (isNaN(amount) || row["Payment Reference"] === "iPad: Part 2") continue;
+            if(row["Booking Date"] === "2025-05-02" && row["Payment Reference"] === "MAWISTA Versicherungsschein MAW76647472") continue;
+            if(row["Booking Date"] === "2025-06-02" && row["Payment Reference"] === "MAWISTA Versicherungsschein MAW76647472") continue;
+            if(row["Booking Date"] === "2025-06-04" && row["Payment Reference"] === "MAWISTA Versicherungsschein MAW76647472") continue;
 
             const booking_date = parse(row["Booking Date"], "yyyy-MM-dd", new Date());
             if (isNaN(booking_date.getTime())) {
