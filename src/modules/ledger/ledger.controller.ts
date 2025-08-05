@@ -21,7 +21,7 @@ const getLedger = async (req: Request, res: Response, next: NextFunction): Promi
 
         for(const account of ledger.accounts) {
             const transactions = await Transaction.find({ ledger_id: req.params.id, account_id: account._id }).lean();
-            const balance = transactions.reduce((acc, cur) => acc + cur.amount, 0);
+            const balance = transactions.reduce((acc, transaction) => acc + transaction.amount, 0);
             account.balance = balance;
         }
 
@@ -50,7 +50,7 @@ async function saveTransaction(req: Request, res: Response) {
     res.json(transaction);
 }
 
-async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
+async function getMonthlyReport(req: Request, res: Response) {
     interface MonthlyCategoryExpense {
         year: number;
         category_id?: Types.ObjectId;
@@ -58,17 +58,25 @@ async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
         [month: string]: any;
     }
 
-    const year: number = req.query.year ?  +req.query.year : new Date().getFullYear();
+    const year: number = req.query.year ? +req.query.year : new Date().getFullYear();
+    const account_id: string | undefined = req.query.account_id as string | undefined;
+
     const ledger = await Ledger.findById(req.params.id).select("categories").lean();
 
-    const transactions = await Transaction.find({
+    const query: any = {
         ledger_id: req.params.id,
         date: {
             $gte: new Date(new Date(year, 0, 1).setHours(0, 0, 0)),
             $lt: new Date(new Date(year, 11, 31).setHours(23, 59, 59))
         },
         category_id: { $ne: null }
-    }).lean();
+    };
+
+    if (account_id) {
+        query.account_id = account_id;
+    }
+
+    const transactions = await Transaction.find(query).lean();
 
     const results: MonthlyCategoryExpense[] = [];
     const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -94,4 +102,4 @@ async function getCategoricalMonthlyExpenses(req: Request, res: Response) {
     res.json(results);
 }
 
-export { getLedgers, getLedger, saveTransaction, getCategoricalMonthlyExpenses };
+export { getLedgers, getLedger, saveTransaction, getMonthlyReport };
