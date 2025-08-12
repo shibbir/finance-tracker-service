@@ -8,6 +8,7 @@ type DocumentProps = {
     currency_format: Types.Subdocument<Types.ObjectId> & ICurrencyFormat;
     accounts: Types.DocumentArray<IAccount>;
     categories: Types.DocumentArray<ICategory>;
+    category_groups: Types.DocumentArray<ICategory>;
     merchants: Types.DocumentArray<IMerchant>;
 };
 
@@ -17,9 +18,16 @@ const schema = new Schema<ILedger, ModelType>({
     name: { type: String, required: true },
     last_modified_on: Date,
     date_format: String,
-    currency_format: new Schema<ICurrencyFormat>({ iso_code: String, decimal_digits: String, decimal_separator: String, group_separator: String, currency_symbol: String }),
+    currency_format: new Schema<ICurrencyFormat>({
+        iso_code: String,
+        decimal_digits: String,
+        decimal_separator: String,
+        group_separator: String,
+        currency_symbol: String
+    }, { _id: false }),
     accounts: [new Schema<IAccount>({ name: String, balance: Number, note: String, closed: Boolean })],
-    categories: [new Schema<ICategory>({ name: String, note: String, hidden: Boolean, deleted: Boolean })],
+    categories: [new Schema<ICategory>({ name: String, note: String, hidden: Boolean, deleted: Boolean, parent_id: Types.ObjectId })],
+    category_groups: [new Schema<ICategory>({ name: String, note: String, hidden: Boolean, deleted: Boolean })],
     merchants: [new Schema<IMerchant>({ name: String })]
 });
 

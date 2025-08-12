@@ -11,28 +11,167 @@ import * as b3 from "../../data/ynab/654abe3d6b5587745b0fb54b.json";
 
 import Ledger from "../../models/ledger.model";
 import Transaction from "../../models/transaction.model";
-import CategoryGroup from "../../models/category-group.model";
 import { ILedger, ICurrencyFormat } from "../../interfaces/ledger.interface";
+import ICategory from "../../interfaces/category.interface";
+
+enum Merchant {
+    BS51GmbH = "BS 51 GmbH",
+    BrainStation23 = "Brain Station 23 Limited",
+    TUChemnitz = "TU Chemnitz",
+    FintibaGmbH = "Fintiba GmbH",
+}
+
+enum CategoryGroup {
+    Inflow = "Inflow",
+    Obligations = "Obligations",
+    Essentials = "Essentials",
+    QualityOfLife = "Quality of Life",
+    SavingsAndInvestments = "Savings & Investments",
+    Miscellaneous = "Miscellaneous",
+    NonTransactional = "Non Transactional"
+}
+
+enum Category {
+    Groceries = "Groceries",
+    Transportation = "Transportation",
+    HomeMaintenance = "Home Maintenance",
+    Clothing = "Clothing",
+    DigitalSubscriptions = "Digital Subscriptions",
+    EatingOut = "Eating Out",
+    Entertainment = "Entertainment",
+    Gadgets = "Gadgets",
+    Wife = "Wife",
+    StockMarket = "Stock Market",
+    RentMortgage = "Rent/Mortgage",
+    HealthInsurance = "Health Insurance",
+    Internet = "Internet",
+    LiabilityInsurance = "Liability Insurance",
+    TaxInterestBankFees = "Tax, Interest & Bank Fees",
+    BroadcastingFee = "Broadcasting Fee",
+    Miscellaneous = "Miscellaneous",
+    Salary = "Salary",
+    DepositRefund = "Deposit Refund",
+    GovernmentSubsidies = "Government Subsidies",
+    InternalTransfer = "Internal Transfer",
+    StartingBalance = "Starting Balance",
+    TaxRefund = "Tax Refund",
+    SemesterFee = "Semester Fee",
+    Books = "Books",
+    OnlineCourses = "Online Courses",
+    Electricity = "Electricity",
+    Electric = "Electric",
+    BalanceReconciliation = "Balance Reconciliation"
+}
 
 const router = express.Router();
 
-async function import_statements(ledger: any, account: any, statements: any) {
-    if(!ledger || !account || !statements) throw new Error("Nothing to import!");
+const isOfficeMerchant = (merchantName?: string): boolean => {
+    if (!merchantName) return false;
+    return Object.values(Merchant).some(officeName => merchantName.includes(officeName));
+};
+
+function getCategoryGroup(category_name: string): CategoryGroup {
+    const category_groups: Record<CategoryGroup, string[]> = {
+        [CategoryGroup.Inflow]: [Category.Salary, Category.DepositRefund, Category.GovernmentSubsidies, Category.TaxRefund],
+        [CategoryGroup.Obligations]: [Category.BroadcastingFee, Category.HealthInsurance, "Internet", Category.LiabilityInsurance, Category.RentMortgage, Category.TaxInterestBankFees, Category.Electricity, Category.Electric, Category.SemesterFee],
+        [CategoryGroup.Essentials]: [Category.Groceries, Category.Transportation, Category.HomeMaintenance],
+        [CategoryGroup.QualityOfLife]: [Category.Clothing, Category.DigitalSubscriptions, Category.EatingOut, Category.Entertainment, Category.Gadgets, Category.Wife, Category.Books, Category.OnlineCourses],
+        [CategoryGroup.SavingsAndInvestments]: [Category.StockMarket],
+        [CategoryGroup.Miscellaneous]: ["Miscellaneous"],
+        [CategoryGroup.NonTransactional]: [Category.InternalTransfer, Category.StartingBalance, Category.BalanceReconciliation]
+    };
+
+    let matchedGroup = CategoryGroup.Miscellaneous;
+
+    for (const [groupName, categories] of Object.entries(category_groups)) {
+        if (categories.some(c => c.toLowerCase() === category_name.trim().toLowerCase())) {
+            matchedGroup = groupName as CategoryGroup;
+            break;
+        }
+    }
+
+    return matchedGroup;
+}
+
+function ynab (ledger: ILedger, transaction: any) {
+    const x = new Transaction({
+        date: new Date(transaction.date),
+        amount: transaction.amount,
+        type: transaction.amount > 0 ? "credit" : "debit",
+        memo: transaction.memo || undefined,
+        deleted: transaction.deleted,
+        ledger_id: ledger._id,
+        account_id: ledger.accounts.find(o => o.ynab_id === transaction.account_id)?._id,
+        merchant_id: ledger.merchants.find(o => o.ynab_id === transaction.payee_id)?._id,
+        category_id: ledger.categories.find(o => o.ynab_id === transaction.category_id)?._id
+    });
+
+    const merchant = ledger.merchants.find(o => o.ynab_id === transaction.payee_id);
+
+    if (transaction.amount > 0 && isOfficeMerchant(merchant?.name)) {
+        x.category_id = ledger.categories.find(o => o.name === Category.Salary)?._id;
+    }
+
+    if (merchant?.name.includes("Starting Balance")) {
+        x.category_id = ledger.categories.find(o => o.name === Category.StartingBalance)?._id;
+    }
+
+    if (transaction.amount < 0 && transaction.memo === "Blocked Account Initial Fee") {
+        x.category_id = ledger.categories.find(o => o.name === Category.TaxInterestBankFees)?._id;
+    }
+
+    if (transaction.amount > 0 && transaction.memo === "200 Euro one-off payment for students") {
+        x.category_id = ledger.categories.find(o => o.name === Category.GovernmentSubsidies)?._id;
+    }
+
+    if (merchant?.name.includes("Transfer :")) {
+        x.category_id = ledger.categories.find(o => o.name === Category.InternalTransfer)?._id;
+    }
+
+    if (merchant?.name.includes("Reconciliation Balance Adjustment")) {
+        x.category_id = ledger.categories.find(o => o.name === Category.BalanceReconciliation)?._id;
+    }
+
+    if (transaction.memo?.includes("TUC 680743") || transaction.memo?.includes("semester fee")) {
+        x.category_id = ledger.categories.find(o => o.name === Category.SemesterFee)?._id;
+        x.merchant_id = ledger.merchants.find(o => o.name === Merchant.TUChemnitz)?._id;
+    }
+
+    if (transaction.memo?.includes("Psychology of Money") || transaction.memo?.includes("DaF kompakt") || transaction.memo?.includes("Phoenix Project") || transaction.memo?.includes("language book")) {
+        x.category_id = ledger.categories.find(o => o.name === Category.Books)?._id;
+    }
+
+    if (transaction.memo?.includes("Casio 991EX")) {
+        x.category_id = ledger.categories.find(o => o.name === Category.Gadgets)?._id;
+    }
+
+    if (transaction.memo?.includes("Administration Fee")) {
+        x.merchant_id = ledger.merchants.find(o => o.name === Merchant.FintibaGmbH)?._id;
+        x.category_id = ledger.categories.find(o => o.name === Category.TaxInterestBankFees)?._id;
+    }
+
+    return x;
+}
+
+async function import_statements(ledger_id: Types.ObjectId, statements: any) {
+    const ledger: any = await Ledger.findOne({ _id: ledger_id });
+
+    if(!ledger || !statements) throw new Error("Ledger not found");
 
     const categories = [
-        { token: /vnr: 130264|studentenwerk|ccb.152.ue.pos00112195|ccb.182.ue.pos00615078|ccb.213.ue.pos00517690/, value: "Rent/Mortgage" },
+        { token: /vnr: 130264|studentenwerk|ccb.152.ue.pos00112195|ccb.182.ue.pos00615078|ccb.213.ue.pos00517690/, value: Category.RentMortgage },
         { token: /edeka|lidl|penny|rewe|kaufland|amritpreet singh|seven days curry|7 days curry pizza|al arabi|netto|rabih maarouf|nahkauf|kabul markt|ariana-orient-house|arianaorienthouse gmbh|rees frischemaerkte kg|delhi masala shop|aldi|aktiv markt sehrer|feinkostmaerkte sehrer|ariana-orient-house|darmalingam prathakaran|c markt|63650444 dresden hbf r\/wiener platz 2025-02-25t21:21:20|dresden\/de 2025-02-25t21:40:25|cm business gmbh/, value: "Groceries" },
-        { token: /best kebap|mcdonalds|yorma|wowfullz|schäfers backstube|ditsch|rasoi restaurant|selecta deutschland|uber|nami wok|sofra kebap|olivia city|beckesepp baeckerei|yormas|freiburger kebap st|saechsische grossbaeckerei|fleischerei richter|hofmans bakery|city kebab|freiburger kebap st|backwerk karlsruhe hbf|anjappar chettinad resta|maydonoz doener|long quan gastronom|willy dany restaurantbetri|le crobag gmbh & co. kg 5004 gir 69 2024-03-24t15:29:13|00210688\/markt\/chemnitz 2025-06-28t17|haus des doner freiburg|63160150 chemnitz db s\/bahnhofstras 2025-07-12t18:49:32|sumup\s*\.?sultan palast\/pfarr 11\/hof|4008-34101 karlsruhe\/\/karlsruhe\/de 2025-03-31t14:57:02/, value: "Eating Out" },
+        { token: /best kebap|mcdonalds|yorma|wowfullz|schäfers backstube|ditsch|rasoi restaurant|selecta deutschland|uber|nami wok|sofra kebap|olivia city|beckesepp baeckerei|yormas|freiburger kebap st|saechsische grossbaeckerei|fleischerei richter|hofmans bakery|city kebab|freiburger kebap st|backwerk karlsruhe hbf|anjappar chettinad resta|maydonoz doener|long quan gastronom|willy dany restaurantbetri|le crobag gmbh & co. kg 5004 gir 69 2024-03-24t15:29:13|00210688\/markt\/chemnitz 2025-06-28t17|haus des doner freiburg|63160150 chemnitz db s\/bahnhofstras 2025-07-12t18:49:32|sumup\s*\.?sultan palast\/pfarr 11\/hof|4008-34101 karlsruhe\/\/karlsruhe\/de 2025-03-31t14:57:02|burger king/, value: "Eating Out" },
         { token: /ea swiss sarl|stea mpowered.com/, value: "Entertainment" },
         // { token: /pfa pflanzen fuer alle gmbh/, value: "Home Improvement" },
         { token: /mietwasch|ccb.343.ue.pos00123816|woolworth gmbh fil. 1745|woolworth gmbh fil. 1495|woolworth gmbh fil.1318|6g5ospzc028l5mle|6mlzs4skty48w2en|6h9171kenvevc0cv|4qx8r6adug4t7rkt|dm drogeriemarkt|ccb.071.ue.pos00154086|ikea|dm fil.2306 h:65132|3eccuohof3g10xsi|oyz3q665trgysxeg|4r3vxkkn5e89r2ri|1035179163747|dm fil.0428 h:65132|ccb.149.ue.pos00013276|3687 chemnitz-sonnenbe\/philippstrae|pepco germany gmbh\/strasse der nati 2025-04-19t14:38:01/, value: "Home Maintenance" },
         { token: /ft: travel|1036833884626|hotel attache|ramada encore|trainline|louvre|hotel aladin|operator ict - aplika|villa melchiorre|azienda trasporti milanesi|milano|alice pizza negozi|erre bar villa monaste|panificio anteri|alhamdulillah minim|super 8|ryanair|venchi bergamo air|mcdonalds aeroporto be|ft_vacation|mcdonald.s\/94 rue saint lazare\/pari/, value: "Travel/Vacation" },
-        { token: /tuc 680743|udemy|u6447sdmrscm1e2h/, value: "Education" },
+        { token: /u6447sdmrscm1e2h/, value: Category.Books },
         { token: /getsafe/, value: "Liability Insurance" },
-        { token: /strom carl-von-ossietzky/, value: "Electric" },
+        { token: /strom carl-von-ossietzky/, value: Category.Electricity },
         { token: /netflix/, value: "Entertainment" },
         { token: /aldi talk/, value: "Cellphone" },
-        { token: /mawista/, value: "Health Insurance" },
+        { token: /mawista/, value: Category.HealthInsurance },
         { token: /pyur/, value: "Internet" },
         { token: /apple|openai|amazon pri|1039105000402\/. cloudflare inc|60scukvdsxaaeeyh/, value: "Digital Subscriptions" },
         { token: /rundfunk/, value: "Broadcasting Fee" },
@@ -40,7 +179,15 @@ async function import_statements(ledger: any, account: any, statements: any) {
         { token: /taxfix|account management/, value: "Tax, Interest & Bank Fees" },
         { token: /pfa pflanzen fuer alle gmbh|karl schmitt co.kg bahnhofs\/\/freibu 2025-05-15t17:47:33|sostrene grene|siemes schuhcenter gmbh|shein|52f0akw65qgw8vv6|45ecxs6246ht0z1j|flac\/\/freiburg|amazon\.de\*a98j84ax5|temu.com|deichmann - schuhe\/\/chemnitz\/de 2025-02-22t13:57:32|ccb.190.ue.pos00001847|tedi\/\/freiburg\/de 2025-07-19t17:18:36 kfn 0 vj 2612 kartenzahlung|sent from n26|f.a.i.r.e. warenhandels eg\/radeburg 2025-04-30t14:28:36|deichmann - schuhe\/\/chemnitz\/de 2024-09-10t13:17:22|woolworth gmbh fil. 1745\/\/freiburg\/ 2025-07-26t16:24:01 kfn 0 vj 2612 kartenzahlung|ccb.215.ue.pos00000663/, value: "Wife" },
         { token: /6gw8h9eo8d7wk4zb|1041861078350|md mossihur rahman|b.b hotels germany gmbh gir 6920881|1041597335896|ccb.076.ue.pos00123642|ccb.072.ue.pos00002748|1040696021474|1043190752959|1043114345411|short pitch cricket|1043409233927|2353dxo8dr8nf186|r04dq9vh4/, value: "Miscellaneous" },
-        { token: /nextbike gmbh|1041094016282/, value: "Transportation" },
+        { token: /nextbike gmbh|1041094016282/, value: Category.Transportation },
+        { token: /interactive brokers|scalable capital/, value: "Stock Market" },
+        { token: /nsct2508080019000000000000000000001|1-552291 customer reference: nsct2408200024620000000000000000006/, value: Category.DepositRefund },
+        { token: /214\/300\/04384 est-g1112202402780056/, value: Category.TaxRefund },
+        { token: /bs 51 gmbh|brain station 23 gmbh/, value: Category.Salary },
+        { token: /de85100110012672394553|shibbir ahmed/, value: Category.InternalTransfer },
+        { token: /s315-saturn electro\/\/chemnitz\/de 2024-08-08t13:11:16/, value: Category.Gadgets },
+        { token: /tuc 680743/, value: Category.SemesterFee },
+        { token: /udemy/, value: Category.OnlineCourses },
     ];
 
     const merchants = [
@@ -67,7 +214,7 @@ async function import_statements(ledger: any, account: any, statements: any) {
         { token: /\bdm\b/, value: "DM" },
         { token: /tedi/, value: "TEDi" },
         { token: /seven days curry|7 days curry pizza/, value: "7 Days Curry & Pizzeria"},
-        { token: /ggg/, value: "GGG" },
+        { token: /ggg|grundstücks- und gebäudewirtschafts - gesellschaft/, value: "GGG" },
         { token: /pyur/, value: "PŸUR" },
         { token: /taxfix/, value: "Taxfix" },
         { token: /getsafe/, value: "Getsafe" },
@@ -104,7 +251,10 @@ async function import_statements(ledger: any, account: any, statements: any) {
         { token: /1041094016282/, value: "Deutsche Bahn AG" },
         { token: /le crobag/, value: "Le Crobag" },
         { token: /haus des doner freiburg/, value: "Haus des Döners" },
-        { token: /studentenwerk chemnitz-zwickau/, value: "Studentenwerk Chemnitz-Zwickau" }
+        { token: /studentenwerk chemnitz-zwickau/, value: "Studentenwerk Chemnitz-Zwickau" },
+        { token: /interactive brokers/, value: "Interactive Brokers" },
+        { token: /burger king/, value: "Burger King" },
+        { token: /tuc 680743/, value: "TU Chemnitz" }
     ];
 
     const excludes_statements = [
@@ -127,8 +277,8 @@ async function import_statements(ledger: any, account: any, statements: any) {
         if (statement.normalizedBookingText === "ft_ignore") continue;
         if (excludes_statements.some(ex => ex.test(normalizedBookingText))) continue;
 
-        let category_id = undefined;
         let merchant_id = undefined;
+        let category_id = statement.category_id;
 
         for(const r of merchants) {
             if(r.token.test(normalizedBookingText)) {
@@ -143,11 +293,13 @@ async function import_statements(ledger: any, account: any, statements: any) {
             }
         }
 
-        if (statement.amount > 0) {
-            if (!statement.booking_text.toLowerCase().includes("bargeldauszahlung") && statement.booking_text.toLowerCase() !== "shibbir ahmed") {
-                category_id = categoryMap.get("Inflow: Ready to Assign");
-            }
-        } else {
+        // if (statement.amount > 0) {
+        //     if (!statement.booking_text.toLowerCase().includes("bargeldauszahlung") && statement.booking_text.toLowerCase() !== "shibbir ahmed") {
+        //         category_id = categoryMap.get("Inflow: Ready to Assign");
+        //     }
+        // } else {
+
+        if (!category_id) {
             let matchedCategory = null;
             for (const r of categories) {
                 if (r.token.test(normalizedBookingText)) {
@@ -161,7 +313,11 @@ async function import_statements(ledger: any, account: any, statements: any) {
                 category_id = categoryMap.get(matchedCategory.value);
                 if (!category_id) {
                     category_id = new Types.ObjectId();
-                    ledger.categories.push({ _id: category_id, name: matchedCategory.value });
+                    ledger.categories.push({
+                        _id: category_id,
+                        name: matchedCategory.value,
+                        parent_id: ledger.category_groups.find((cg: ICategory) => cg.name === getCategoryGroup(matchedCategory.value))?._id
+                    });
                     categoryMap.set(matchedCategory.value, category_id);
                     modified = true;
                 }
@@ -174,7 +330,7 @@ async function import_statements(ledger: any, account: any, statements: any) {
             type: statement.amount > 0 ? "credit" : "debit",
             memo: statement.booking_text || undefined,
             ledger_id: ledger._id,
-            account_id: account._id,
+            account_id: statement.account_id,
             category_id,
             merchant_id
         });
@@ -200,6 +356,7 @@ async function import_ynab() {
             last_modified_on: new Date(x.data.budget.last_modified_on),
             accounts: [],
             categories: [],
+            category_groups: [],
             merchants: []
         };
 
@@ -214,54 +371,86 @@ async function import_ynab() {
             });
         }
 
+        [
+            CategoryGroup.Inflow,
+            CategoryGroup.Obligations,
+            CategoryGroup.Essentials,
+            CategoryGroup.QualityOfLife,
+            CategoryGroup.SavingsAndInvestments,
+            CategoryGroup.Miscellaneous,
+            CategoryGroup.NonTransactional
+        ].forEach(groupName => {
+            ledger.category_groups.push({
+                _id: new Types.ObjectId(),
+                name: groupName,
+                note: undefined
+            });
+        });
+
+        [
+            Category.Salary,
+            Category.DepositRefund,
+            Category.GovernmentSubsidies,
+            Category.InternalTransfer,
+            Category.StartingBalance,
+            Category.TaxInterestBankFees,
+            Category.SemesterFee,
+            Category.Books,
+            Category.BalanceReconciliation
+        ].forEach(categoryName => {
+            ledger.categories.push({
+                _id: new Types.ObjectId(),
+                name: categoryName,
+                parent_id: ledger.category_groups.find(group => group.name === getCategoryGroup(categoryName))?._id
+            });
+        });
+
+        const excludedCategories = [
+            "Uncategorized", "Auto Maintenance", "Fun Money", "Software Subscriptions", "Hobbies", "Stuff I Forgot to Budget For",
+            "Auto Loan", "Renter's/Home Insurance", "Student Loan", "Plain Fare", "Music"
+        ];
+
         for(const category of x.data.budget.categories) {
+            if (excludedCategories.includes(category.name)) continue;
+
             ledger.categories.push({
                 _id: new Types.ObjectId(),
                 ynab_id: category.id,
-                name: category.name,
-                note: category.note || undefined,
-                hidden: category.hidden,
-                deleted: category.deleted
+                name: category.name === "Electric" ?  Category.Electricity : category.name,
+                parent_id: ledger.category_groups.find(o => o.name === getCategoryGroup(category.name))?._id
             });
         }
+
+        [
+            Merchant.TUChemnitz
+        ].forEach(name => {
+            ledger.merchants.push({
+                _id: new Types.ObjectId(),
+                name
+            });
+        });
 
         for(const merchant of x.data.budget.payees) {
             ledger.merchants.push({
                 _id: new Types.ObjectId(),
                 ynab_id: merchant.id,
-                name: merchant.name === "Brain Station 51" ?  "BS 51 GmbH" : merchant.name
+                name: merchant.name === "Brain Station 51" ?  Merchant.BS51GmbH : merchant.name
             });
         }
 
         await Ledger.create(ledger);
 
         const transactions = [];
-        for(const t of x.data.budget.transactions) {
-            const amount = typeof t.amount === "number" ? t.amount / 1000 : 0;
+        for(const transaction of x.data.budget.transactions) {
+            const amount = typeof transaction.amount === "number" ? transaction.amount / 1000 : 0;
+            transaction.amount = amount;
 
             if(amount === 0) continue;
 
-            const transaction = new Transaction({
-                date: new Date(t.date),
-                amount: amount,
-                type: amount > 0 ? "credit" : "debit",
-                memo: t.memo || undefined,
-                flag_color: t.flag_color || undefined,
-                deleted: t.deleted,
-                ledger_id: ledger._id,
-                account_id: ledger.accounts.find(o => o.ynab_id === t.account_id)?._id,
-                category_id: ledger.categories.find(o => o.ynab_id === t.category_id)?._id,
-                merchant_id: ledger.merchants.find(o => o.ynab_id === t.payee_id)?._id
-            });
-
-            transactions.push(transaction);
+            transactions.push(ynab(ledger, transaction));
         }
         await Transaction.insertMany(transactions);
     }
-
-    const category_groups = ["Bills", "Essentials", "Obligations", "Savings/Investments", "Quality of Life"];
-
-    await CategoryGroup.insertMany(category_groups.map(x => ({ name: x })));
 }
 
 async function import_commerzbank() {
@@ -285,6 +474,7 @@ async function import_commerzbank() {
 
         for await (const row of csv_parser) {
             statements.push({
+                account_id: account._id,
                 booking_date: parse(row["Booking date"], "dd.MM.yyyy", new Date()),
                 booking_text: row["Booking text"],
                 amount: typeof row.Amount === "string" ? parseFloat(row.Amount.replace(",", ".")) : row.Amount
@@ -292,7 +482,7 @@ async function import_commerzbank() {
         }
     }
 
-    await import_statements(ledger, account, statements);
+    await import_statements(ledger._id, statements);
 }
 
 async function import_n26() {
@@ -322,29 +512,37 @@ async function import_n26() {
             if(row["Booking Date"] === "2025-05-02" && row["Payment Reference"] === "MAWISTA Versicherungsschein MAW76647472") continue;
             if(row["Booking Date"] === "2025-06-02" && row["Payment Reference"] === "MAWISTA Versicherungsschein MAW76647472") continue;
             if(row["Booking Date"] === "2025-06-04" && row["Payment Reference"] === "MAWISTA Versicherungsschein MAW76647472") continue;
+            if(row["Booking Date"] === "2024-03-12" && row["Payment Reference"] === "-") continue;
 
             const booking_date = parse(row["Booking Date"], "yyyy-MM-dd", new Date());
             if (isNaN(booking_date.getTime())) {
                 throw new Error(`Invalid booking date: ${row["Booking Date"]}`);
             }
 
+            let category_id = null;
+
+            if(row["Booking Date"] === "2025-05-21" && row["Payment Reference"].includes("STROM Carl-von-Ossietzky-Str") && amount > 0) {
+                category_id = ledger.categories.find(c => c.name === Category.DepositRefund)?._id;
+            }
+
             statements.push({
+                amount,
+                account_id: account._id,
+                category_id,
                 booking_date,
-                booking_text: (row["Payment Reference"] || row["Partner Name"] || "").trim(),
-                amount
+                booking_text: (row["Payment Reference"] || row["Partner Name"] || "").trim()
             });
         }
     }
 
-    await import_statements(ledger, account, statements);
+    await import_statements(ledger._id, statements);
 }
 
 router.post("/import-data", async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
         await Promise.all([
             Ledger.deleteMany({}),
-            Transaction.deleteMany({}),
-            CategoryGroup.deleteMany({})
+            Transaction.deleteMany({})
         ]);
 
         await import_ynab();

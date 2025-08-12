@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
-import Account from "./account.interface";
-import Category from "./category.interface";
-import Merchant from "./merchant.interface";
+import IAccount from "./account.interface";
+import ICategory from "./category.interface";
+import IMerchant from "./merchant.interface";
 
 interface ICurrencyFormat {
     iso_code: string;
@@ -17,9 +17,10 @@ interface ILedger {
     last_modified_on: Date;
     date_format: string;
     currency_format: ICurrencyFormat;
-    accounts: Account[];
-    categories: Category[];
-    merchants: Merchant[];
+    accounts: IAccount[];
+    categories: ICategory[];
+    category_groups: ICategory[];
+    merchants: IMerchant[];
 }
 
 export { ILedger, ICurrencyFormat };

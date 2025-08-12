@@ -6,7 +6,6 @@ interface ITransaction {
     amount: number;
     type: string;
     memo?: string;
-    flag_color?: string;
     deleted: boolean;
     ledger_id: Types.ObjectId;
     account_id?: Types.ObjectId;

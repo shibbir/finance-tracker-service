@@ -6,7 +6,6 @@ const schema = new Schema<ITransaction, Model<ITransaction>>({
     amount: Number,
     type: { type: String, required: true, enum: ["credit", "debit"] },
     memo: String,
-    flag_color: String,
     deleted: Boolean,
     ledger_id: { type: Schema.Types.ObjectId, required: true },
     account_id: { type: Schema.Types.ObjectId, required: true },

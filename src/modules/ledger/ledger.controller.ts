@@ -63,13 +63,19 @@ async function getMonthlyReport(req: Request, res: Response) {
 
     const ledger = await Ledger.findById(req.params.id).select("categories").lean();
 
+    if (!ledger) throw new Error(`Ledger not found: ${req.params.id}`);
+
+    const excludedCategories = ledger.categories
+        .filter(c => c.name === "Internal Transfer" || c.name === "Starting Balance" || c.name === "Stock Market")
+        .map(c => c._id.toString());
+
     const query: any = {
         ledger_id: req.params.id,
         date: {
-            $gte: new Date(new Date(year, 0, 1).setHours(0, 0, 0)),
-            $lt: new Date(new Date(year, 11, 31).setHours(23, 59, 59))
+            $gte: new Date(year, 0, 1, 0, 0, 0),
+            $lt: new Date(year + 1, 0, 1, 0, 0, 0)
         },
-        category_id: { $ne: null }
+        category_id: { $nin: excludedCategories.length ? excludedCategories : [null] }
     };
 
     if (account_id) {
@@ -83,7 +89,7 @@ async function getMonthlyReport(req: Request, res: Response) {
 
     for(const transaction of transactions) {
         const month = months[transaction.date.getMonth()].toLowerCase();
-        const category_name = (ledger?.categories as ICategory[]).find(x => x._id.equals(transaction.category_id))?.name;
+        const category_name = (ledger.categories as ICategory[]).find(x => x._id.equals(transaction.category_id))?.name;
 
         const existing = results.find((x: MonthlyCategoryExpense) => x.category_id?.equals(transaction.category_id));
 
@@ -92,8 +98,8 @@ async function getMonthlyReport(req: Request, res: Response) {
         } else {
             results.push({
                 year,
+                category_name,
                 category_id: transaction.category_id,
-                category_name: category_name,
                 [month]: currency(transaction.amount)
             });
         }
