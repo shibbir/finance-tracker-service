@@ -59,8 +59,10 @@ enum Category {
     Books = "Books",
     OnlineCourses = "Online Courses",
     Electricity = "Electricity",
-    Electric = "Electric",
-    BalanceReconciliation = "Balance Reconciliation"
+    BalanceReconciliation = "Balance Reconciliation",
+    PhoneBill = "Phone Bill",
+    Vacation = "Travel/Vacation",
+    Accommodation = "Accommodation",
 }
 
 const router = express.Router();
@@ -73,9 +75,9 @@ const isOfficeMerchant = (merchantName?: string): boolean => {
 function getCategoryGroup(category_name: string): CategoryGroup {
     const category_groups: Record<CategoryGroup, string[]> = {
         [CategoryGroup.Inflow]: [Category.Salary, Category.DepositRefund, Category.GovernmentSubsidies, Category.TaxRefund],
-        [CategoryGroup.Obligations]: [Category.BroadcastingFee, Category.HealthInsurance, "Internet", Category.LiabilityInsurance, Category.RentMortgage, Category.TaxInterestBankFees, Category.Electricity, Category.Electric, Category.SemesterFee],
-        [CategoryGroup.Essentials]: [Category.Groceries, Category.Transportation, Category.HomeMaintenance],
-        [CategoryGroup.QualityOfLife]: [Category.Clothing, Category.DigitalSubscriptions, Category.EatingOut, Category.Entertainment, Category.Gadgets, Category.Wife, Category.Books, Category.OnlineCourses],
+        [CategoryGroup.Obligations]: [Category.BroadcastingFee, Category.HealthInsurance, Category.LiabilityInsurance, Category.RentMortgage, Category.TaxInterestBankFees, Category.SemesterFee],
+        [CategoryGroup.Essentials]: [Category.Groceries, Category.Internet, Category.Transportation, Category.HomeMaintenance, Category.Clothing, Category.Electricity, "Electric", Category.PhoneBill, "Cellphone", Category.Accommodation],
+        [CategoryGroup.QualityOfLife]: [Category.DigitalSubscriptions, Category.EatingOut, Category.Entertainment, Category.Gadgets, Category.Wife, Category.Books, Category.OnlineCourses],
         [CategoryGroup.SavingsAndInvestments]: [Category.StockMarket],
         [CategoryGroup.Miscellaneous]: ["Miscellaneous"],
         [CategoryGroup.NonTransactional]: [Category.InternalTransfer, Category.StartingBalance, Category.BalanceReconciliation]
@@ -91,6 +93,15 @@ function getCategoryGroup(category_name: string): CategoryGroup {
     }
 
     return matchedGroup;
+}
+
+function getCategory(category_name: string): Category {
+    const categoryMap: Record<string, Category> = {
+        "Cellphone": Category.PhoneBill,
+        "Electric": Category.Electricity
+    };
+
+    return categoryMap[category_name] ?? (category_name as Category);
 }
 
 function ynab (ledger: ILedger, transaction: any) {
@@ -150,6 +161,10 @@ function ynab (ledger: ILedger, transaction: any) {
         x.category_id = ledger.categories.find(o => o.name === Category.TaxInterestBankFees)?._id;
     }
 
+    if (transaction.memo?.includes("N26 additional card fee")) {
+        x.category_id = ledger.categories.find(o => o.name === Category.TaxInterestBankFees)?._id;
+    }
+
     return x;
 }
 
@@ -160,34 +175,34 @@ async function import_statements(ledger_id: Types.ObjectId, statements: any) {
 
     const categories = [
         { token: /vnr: 130264|studentenwerk|ccb.152.ue.pos00112195|ccb.182.ue.pos00615078|ccb.213.ue.pos00517690/, value: Category.RentMortgage },
-        { token: /edeka|lidl|penny|rewe|kaufland|amritpreet singh|seven days curry|7 days curry pizza|al arabi|netto|rabih maarouf|nahkauf|kabul markt|ariana-orient-house|arianaorienthouse gmbh|rees frischemaerkte kg|delhi masala shop|aldi|aktiv markt sehrer|feinkostmaerkte sehrer|ariana-orient-house|darmalingam prathakaran|c markt|63650444 dresden hbf r\/wiener platz 2025-02-25t21:21:20|dresden\/de 2025-02-25t21:40:25|cm business gmbh/, value: "Groceries" },
-        { token: /best kebap|mcdonalds|yorma|wowfullz|schäfers backstube|ditsch|rasoi restaurant|selecta deutschland|uber|nami wok|sofra kebap|olivia city|beckesepp baeckerei|yormas|freiburger kebap st|saechsische grossbaeckerei|fleischerei richter|hofmans bakery|city kebab|freiburger kebap st|backwerk karlsruhe hbf|anjappar chettinad resta|maydonoz doener|long quan gastronom|willy dany restaurantbetri|le crobag gmbh & co. kg 5004 gir 69 2024-03-24t15:29:13|00210688\/markt\/chemnitz 2025-06-28t17|haus des doner freiburg|63160150 chemnitz db s\/bahnhofstras 2025-07-12t18:49:32|sumup\s*\.?sultan palast\/pfarr 11\/hof|4008-34101 karlsruhe\/\/karlsruhe\/de 2025-03-31t14:57:02|burger king/, value: "Eating Out" },
-        { token: /ea swiss sarl|stea mpowered.com/, value: "Entertainment" },
-        // { token: /pfa pflanzen fuer alle gmbh/, value: "Home Improvement" },
-        { token: /mietwasch|ccb.343.ue.pos00123816|woolworth gmbh fil. 1745|woolworth gmbh fil. 1495|woolworth gmbh fil.1318|6g5ospzc028l5mle|6mlzs4skty48w2en|6h9171kenvevc0cv|4qx8r6adug4t7rkt|dm drogeriemarkt|ccb.071.ue.pos00154086|ikea|dm fil.2306 h:65132|3eccuohof3g10xsi|oyz3q665trgysxeg|4r3vxkkn5e89r2ri|1035179163747|dm fil.0428 h:65132|ccb.149.ue.pos00013276|3687 chemnitz-sonnenbe\/philippstrae|pepco germany gmbh\/strasse der nati 2025-04-19t14:38:01/, value: "Home Maintenance" },
+        { token: /edeka|lidl|penny|rewe|kaufland|amritpreet singh|seven days curry|7 days curry pizza|al arabi|netto|rabih maarouf|nahkauf|kabul markt|ariana-orient-house|arianaorienthouse gmbh|rees frischemaerkte kg|delhi masala shop|aldi|aktiv markt sehrer|feinkostmaerkte sehrer|ariana-orient-house|darmalingam prathakaran|c markt|63650444 dresden hbf r\/wiener platz 2025-02-25t21:21:20|dresden\/de 2025-02-25t21:40:25|cm business gmbh/, value: Category.Groceries },
+        { token: /best kebap|mcdonalds|yorma|wowfullz|schäfers backstube|ditsch|rasoi restaurant|selecta deutschland|uber|nami wok|sofra kebap|olivia city|beckesepp baeckerei|yormas|freiburger kebap st|saechsische grossbaeckerei|fleischerei richter|hofmans bakery|city kebab|freiburger kebap st|backwerk karlsruhe hbf|anjappar chettinad resta|maydonoz doener|long quan gastronom|willy dany restaurantbetri|le crobag gmbh & co. kg 5004 gir 69 2024-03-24t15:29:13|00210688\/markt\/chemnitz 2025-06-28t17|haus des doner freiburg|63160150 chemnitz db s\/bahnhofstras 2025-07-12t18:49:32|sumup\s*\.?sultan palast\/pfarr 11\/hof|4008-34101 karlsruhe\/\/karlsruhe\/de 2025-03-31t14:57:02|burger king|tuerkitch\/\/muenchen|mcdonald s deutschland llc\/\/muenche 2024-07-21|ar systemgastronomie gmbh\/\/muenchen 2024-07-21|690 kentucky fried chicken|de 2024-03-24t21:30:26/, value: Category.EatingOut },
+        { token: /ea swiss sarl|stea mpowered.com|netflix/, value: Category.Entertainment },
+        { token: /mietwasch|ccb.343.ue.pos00123816|woolworth gmbh fil. 1745|woolworth gmbh fil. 1495|woolworth gmbh fil.1318|6g5ospzc028l5mle|6mlzs4skty48w2en|6h9171kenvevc0cv|4qx8r6adug4t7rkt|dm drogeriemarkt|ccb.071.ue.pos00154086|ikea|dm fil.2306 h:65132|3eccuohof3g10xsi|oyz3q665trgysxeg|4r3vxkkn5e89r2ri|1035179163747|dm fil.0428 h:65132|ccb.149.ue.pos00013276|3687 chemnitz-sonnenbe\/philippstrae|pepco germany gmbh\/strasse der nati 2025-04-19t14:38:01|ic-18431534864|tedi\/\/freiburg\/de 2025-05-06t18:55:41|57sjsf9ztlm8my1c|2r9318bywp1grswx|ykzymxg2jfpzjlx2|68vegp6fi0j5ljdr|07111503004746226120000118065021043|u20jz51o7wjilatf/, value: Category.HomeMaintenance },
         { token: /ft: travel|1036833884626|hotel attache|ramada encore|trainline|louvre|hotel aladin|operator ict - aplika|villa melchiorre|azienda trasporti milanesi|milano|alice pizza negozi|erre bar villa monaste|panificio anteri|alhamdulillah minim|super 8|ryanair|venchi bergamo air|mcdonalds aeroporto be|ft_vacation|mcdonald.s\/94 rue saint lazare\/pari/, value: "Travel/Vacation" },
         { token: /u6447sdmrscm1e2h/, value: Category.Books },
-        { token: /getsafe/, value: "Liability Insurance" },
+        { token: /getsafe/, value: Category.LiabilityInsurance },
         { token: /strom carl-von-ossietzky/, value: Category.Electricity },
-        { token: /netflix/, value: "Entertainment" },
-        { token: /aldi talk/, value: "Cellphone" },
+        { token: /aldi talk/, value: Category.PhoneBill },
         { token: /mawista/, value: Category.HealthInsurance },
-        { token: /pyur/, value: "Internet" },
-        { token: /apple|openai|amazon pri|1039105000402\/. cloudflare inc|60scukvdsxaaeeyh/, value: "Digital Subscriptions" },
-        { token: /rundfunk/, value: "Broadcasting Fee" },
-        { token: /ca\/\/chemnitz|ca\/\/freiburg/, value: "Clothing" },
-        { token: /taxfix|account management/, value: "Tax, Interest & Bank Fees" },
-        { token: /pfa pflanzen fuer alle gmbh|karl schmitt co.kg bahnhofs\/\/freibu 2025-05-15t17:47:33|sostrene grene|siemes schuhcenter gmbh|shein|52f0akw65qgw8vv6|45ecxs6246ht0z1j|flac\/\/freiburg|amazon\.de\*a98j84ax5|temu.com|deichmann - schuhe\/\/chemnitz\/de 2025-02-22t13:57:32|ccb.190.ue.pos00001847|tedi\/\/freiburg\/de 2025-07-19t17:18:36 kfn 0 vj 2612 kartenzahlung|sent from n26|f.a.i.r.e. warenhandels eg\/radeburg 2025-04-30t14:28:36|deichmann - schuhe\/\/chemnitz\/de 2024-09-10t13:17:22|woolworth gmbh fil. 1745\/\/freiburg\/ 2025-07-26t16:24:01 kfn 0 vj 2612 kartenzahlung|ccb.215.ue.pos00000663/, value: "Wife" },
-        { token: /6gw8h9eo8d7wk4zb|1041861078350|md mossihur rahman|b.b hotels germany gmbh gir 6920881|1041597335896|ccb.076.ue.pos00123642|ccb.072.ue.pos00002748|1040696021474|1043190752959|1043114345411|short pitch cricket|1043409233927|2353dxo8dr8nf186|r04dq9vh4/, value: "Miscellaneous" },
+        { token: /pyur/, value: Category.Internet },
+        { token: /apple|openai|amazon pri|1039105000402\/. cloudflare inc|60scukvdsxaaeeyh|amznprime/, value: Category.DigitalSubscriptions },
+        { token: /rundfunk/, value: Category.BroadcastingFee },
+        { token: /ca\/\/chemnitz|ca\/\/freiburg|1035210812290|1035210832763/, value: Category.Clothing },
+        { token: /taxfix|account management/, value: Category.TaxInterestBankFees },
+        { token: /pfa pflanzen fuer alle gmbh|karl schmitt co.kg bahnhofs\/\/freibu 2025-05-15t17:47:33|sostrene grene|siemes schuhcenter gmbh|shein|52f0akw65qgw8vv6|45ecxs6246ht0z1j|flac\/\/freiburg|amazon\.de\*a98j84ax5|temu.com|deichmann - schuhe\/\/chemnitz\/de 2025-02-22t13:57:32|ccb.190.ue.pos00001847|tedi\/\/freiburg\/de 2025-07-19t17:18:36 kfn 0 vj 2612 kartenzahlung|sent from n26|f.a.i.r.e. warenhandels eg\/radeburg 2025-04-30t14:28:36|deichmann - schuhe\/\/chemnitz\/de 2024-09-10t13:17:22|woolworth gmbh fil. 1745\/\/freiburg\/ 2025-07-26t16:24:01 kfn 0 vj 2612 kartenzahlung|ccb.215.ue.pos00000663|ccb.218.ue.pos00000704|ccb.212.ue.484438|ccb.205.ue.pos00057176|ccb.201.ue.pos00048799|ccb.197.ue.pos00068902|ccb.193.ue.pos00016541|ccb.330.ue.165332|ccb.327.ue.5586|euroshop-43310 muenchen|parfuemerie douglas/, value: Category.Wife },
+        { token: /6gw8h9eo8d7wk4zb|md mossihur rahman|1041597335896|ccb.076.ue.pos00123642|ccb.072.ue.pos00002748|1040696021474|1043114345411|short pitch cricket|1043409233927|2353dxo8dr8nf186|r04dq9vh4/, value: "Miscellaneous" },
         { token: /nextbike gmbh|1041094016282/, value: Category.Transportation },
-        { token: /interactive brokers|scalable capital/, value: "Stock Market" },
+        { token: /interactive brokers|scalable capital/, value: Category.StockMarket },
         { token: /nsct2508080019000000000000000000001|1-552291 customer reference: nsct2408200024620000000000000000006/, value: Category.DepositRefund },
         { token: /214\/300\/04384 est-g1112202402780056/, value: Category.TaxRefund },
         { token: /bs 51 gmbh|brain station 23 gmbh/, value: Category.Salary },
         { token: /de85100110012672394553|shibbir ahmed/, value: Category.InternalTransfer },
-        { token: /s315-saturn electro\/\/chemnitz\/de 2024-08-08t13:11:16/, value: Category.Gadgets },
+        { token: /s315-saturn electro\/\/chemnitz\/de 2024-08-08t13:11:16|de\*hj6l028o4/, value: Category.Gadgets },
         { token: /tuc 680743/, value: Category.SemesterFee },
         { token: /udemy/, value: Category.OnlineCourses },
+        { token: /1036461870596|1035785811328/, value: Category.DigitalSubscriptions },
+        { token: /6920881 2025-03-23t16:40:22|1041861078350|1043190752959|1044282374526|1044260008069|1044202755243/, value: Category.Accommodation }
     ];
 
     const merchants = [
@@ -197,7 +212,7 @@ async function import_statements(ledger_id: Types.ObjectId, statements: any) {
         { token: /rewe/, value: "REWE" },
         { token: /kaufland/, value: "Kaufland" },
         { token: /amritpreet singh/, value: "Bollywood Shop" },
-        { token: /ikea/, value: "IKEA" },
+        { token: /ikea|07111503004746226120000118065021043/, value: "IKEA" },
         { token: /deichmann/, value: "Deichmann" },
         { token: /woolworth/, value: "Woolworth GmbH" },
         { token: /bs 51 gmbh/, value: "BS 51 GmbH" },
@@ -254,7 +269,9 @@ async function import_statements(ledger_id: Types.ObjectId, statements: any) {
         { token: /studentenwerk chemnitz-zwickau/, value: "Studentenwerk Chemnitz-Zwickau" },
         { token: /interactive brokers/, value: "Interactive Brokers" },
         { token: /burger king/, value: "Burger King" },
-        { token: /tuc 680743/, value: "TU Chemnitz" }
+        { token: /tuc 680743/, value: "TU Chemnitz" },
+        { token: /1036461870596/, value: "Namecheap" },
+        { token: /kentucky fried chicken/, value: "KFC" },
     ];
 
     const excludes_statements = [
@@ -262,7 +279,8 @@ async function import_statements(ledger_id: Types.ObjectId, statements: any) {
         /ccb.270.ue.pos00055906/, /ccb.332.ue.pos00203270/, /dispoid:000178601462269/, /dispoid:000178580255411/, /dispoid:000178572347615/, /dispoid:000056924668600/,
         /bargeldeinzahlung karte 0 einzahlautomat 214174 einzahlung 16.06.2025 18:06 freiburg kaiser-joseph-str./, /bargeldauszahlung commerzbank 00202269\/kaiser-joseph- 2025-05-31t18:42:59/,
         /bargeldauszahlung commerzbank 00210688\/markt\/chemnitz 2024-09-10t13:54:57/, /bargeldauszahlung commerzbank 00202644\/markt\/chemnitz 2024-07-16t14:07:12/,
-        /bargeldeinzahlung karte 0 einzahlautomat 214135 einzahlung 21.03.2025 20:37 frankfurt am main roßmarkt/, /ry5f84g64/, /r79jy9bb4/
+        /bargeldeinzahlung karte 0 einzahlautomat 214135 einzahlung 21.03.2025 20:37 frankfurt am main roßmarkt/, /ry5f84g64/, /r79jy9bb4/, /24021522006456726120000118665138492/,
+        /nsct2503110030960000000000000000007/, /ccb.56.ue.5648/, /amazon\.de\*rm28t5cj4/, /ccb.138.ue.pos00210498/, /db25d04152b64dbdba74f0d6af3d19c7/, /amazon\.de\*rm1cv6da4/
     ];
 
     const merchantMap = new Map(ledger.merchants.map((c: { name: string; _id: string }) => [c.name, c._id]));
@@ -416,7 +434,7 @@ async function import_ynab() {
             ledger.categories.push({
                 _id: new Types.ObjectId(),
                 ynab_id: category.id,
-                name: category.name === "Electric" ?  Category.Electricity : category.name,
+                name: getCategory(category.name),
                 parent_id: ledger.category_groups.find(o => o.name === getCategoryGroup(category.name))?._id
             });
         }
@@ -512,6 +530,8 @@ async function import_n26() {
             if(row["Booking Date"] === "2025-05-02" && row["Payment Reference"] === "MAWISTA Versicherungsschein MAW76647472") continue;
             if(row["Booking Date"] === "2025-06-02" && row["Payment Reference"] === "MAWISTA Versicherungsschein MAW76647472") continue;
             if(row["Booking Date"] === "2025-06-04" && row["Payment Reference"] === "MAWISTA Versicherungsschein MAW76647472") continue;
+            if((row["Booking Date"] === "2025-05-19" || row["Booking Date"] === "2025-05-27") && row["Partner Name"] === "Shibbir Ahmed") continue;
+            if(row["Booking Date"] === "2025-06-01" && row["Partner Name"] === "Tasnim Mafiz") continue;
             if(row["Booking Date"] === "2024-03-12" && row["Payment Reference"] === "-") continue;
 
             const booking_date = parse(row["Booking Date"], "yyyy-MM-dd", new Date());
@@ -521,8 +541,16 @@ async function import_n26() {
 
             let category_id = null;
 
+            if(row["Booking Date"] === "2024-06-24" && row["Partner Name"].includes("Partners on Booking BV")) {
+                category_id = ledger.categories.find(c => c.name === Category.Accommodation)?._id;
+            }
+
             if(row["Booking Date"] === "2025-05-21" && row["Payment Reference"].includes("STROM Carl-von-Ossietzky-Str") && amount > 0) {
                 category_id = ledger.categories.find(c => c.name === Category.DepositRefund)?._id;
+            }
+
+            if((row["Booking Date"] === "2023-12-03" || row["Booking Date"] === "2024-01-08") && row["Partner Name"].includes("Mietwasch")) {
+                category_id = ledger.categories.find(c => c.name === Category.HomeMaintenance)?._id;
             }
 
             statements.push({
